@@ -1,8 +1,7 @@
 import numpy as np
 import os
 from datetime import datetime
-from configs.go2_constraint_him import Go2ConstraintHimRoughCfg, Go2ConstraintHimRoughCfgPPO
-
+from configs import *
 
 import isaacgym
 from utils.helpers import get_args
@@ -15,7 +14,6 @@ def train(args):
     ppo_runner.learn(num_learning_iterations=train_cfg.runner.max_iterations, init_at_random_ep_len=True)
 
 if __name__ == '__main__':
-    task_registry.register("go2N3poHim",LeggedRobot,Go2ConstraintHimRoughCfg(),Go2ConstraintHimRoughCfgPPO())
   
     args = get_args()
     train(args)

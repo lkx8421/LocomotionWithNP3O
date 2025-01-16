@@ -1,12 +1,11 @@
-from configs.go2_constraint_him import Go2ConstraintHimRoughCfg, Go2ConstraintHimRoughCfgPPO
 import cv2
 import os
 
+from configs import *
 from isaacgym import gymapi
 from envs import LeggedRobot
 from modules import *
-from utils import  get_args, export_policy_as_jit, task_registry, Logger
-from configs import *
+from utils import  get_args, export_policy_as_jit, task_registry, Logger, get_load_path
 from utils.helpers import class_to_dict
 from utils.task_registry import task_registry
 import numpy as np
@@ -63,7 +62,13 @@ def play(args):
                                                       **policy_cfg_dict)
     print(policy)
     #model_dict = torch.load(os.path.join(ROOT_DIR, 'model_4000_phase2_hip.pt'))
-    model_dict = torch.load(os.path.join(ROOT_DIR, 'model_10000_32_sb.pt'))
+    if 0:
+      log_root = os.path.join(ROOT_DIR, 'logs', train_cfg.runner.experiment_name)
+      resume_path = get_load_path(log_root, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
+    else:
+      resume_path = os.path.join(ROOT_DIR, 'model_6000.pt')
+    model_dict = torch.load(resume_path)
+    print("resume_path", resume_path)
     policy.load_state_dict(model_dict['model_state_dict'])
     policy.half()
     policy.eval()
@@ -139,7 +144,6 @@ def play(args):
     print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=10))
 
 if __name__ == '__main__':
-    task_registry.register("go2N3poHim",LeggedRobot,Go2ConstraintHimRoughCfg(),Go2ConstraintHimRoughCfgPPO())
   
     RECORD_FRAMES = True
     args = get_args()
