@@ -14,6 +14,7 @@ from envs.vec_env import VecEnv
 from modules.depth_backbone import DepthOnlyFCBackbone58x87, RecurrentDepthBackbone
 from utils.helpers import hard_phase_schedualer, partial_checkpoint_load
 from copy import copy, deepcopy
+from utils import get_load_path
 
 class OnConstraintPolicyRunner:
 
@@ -41,7 +42,10 @@ class OnConstraintPolicyRunner:
                                                       self.env.num_actions,
                                                       **self.policy_cfg)
         if self.cfg['resume']:
-            model_dict = torch.load(os.path.join(ROOT_DIR, self.cfg['resume_path']))
+            log_root = os.path.join(ROOT_DIR, 'logs', self.cfg['experiment_name'], self.cfg['resume_path'])
+            resume_path = get_load_path(log_root, load_run=self.cfg['load_run'], checkpoint=self.cfg['checkpoint'])
+            print("Resume model from: ",resume_path)
+            model_dict = torch.load(resume_path)
             actor_critic.load_state_dict(model_dict['model_state_dict'])
         
         actor_critic.to(self.device)

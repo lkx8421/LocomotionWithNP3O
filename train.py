@@ -5,7 +5,6 @@ from configs import *
 
 import isaacgym
 from utils.helpers import get_args
-from envs import LeggedRobot
 from utils.task_registry import task_registry
 
 def train(args):

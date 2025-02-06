@@ -28,7 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-from configs.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
+from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 class Wl4ConstraintHimRoughCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):

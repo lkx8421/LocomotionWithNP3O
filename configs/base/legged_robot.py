@@ -7,7 +7,7 @@ from typing import Dict
 import random
 
 # env related
-from envs.base_task import BaseTask
+from .base_task import BaseTask
 
 # utils
 from utils.terrain import Terrain

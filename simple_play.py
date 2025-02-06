@@ -3,7 +3,6 @@ import os
 
 from configs import *
 from isaacgym import gymapi
-from envs import LeggedRobot
 from modules import *
 from utils import  get_args, export_policy_as_jit, task_registry, Logger, get_load_path
 from utils.helpers import class_to_dict
@@ -62,7 +61,7 @@ def play(args):
                                                       **policy_cfg_dict)
     print(policy)
     #model_dict = torch.load(os.path.join(ROOT_DIR, 'model_4000_phase2_hip.pt'))
-    if 0:
+    if 1:
       log_root = os.path.join(ROOT_DIR, 'logs', train_cfg.runner.experiment_name)
       resume_path = get_load_path(log_root, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
     else:

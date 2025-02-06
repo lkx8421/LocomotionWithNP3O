@@ -34,7 +34,6 @@ import cv2
 import os
 
 from isaacgym import gymapi
-from envs import LeggedRobot
 from modules import *
 from utils import  get_args, export_policy_as_jit, task_registry, Logger
 from configs import *
