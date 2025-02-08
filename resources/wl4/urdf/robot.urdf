@@ -279,19 +279,19 @@
     <kp value="1000000.0"/>
     <kd value="1.0"/>
   </gazebo>
-  <!-- <link name="base">
+    <link name="base">
         <visual>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
                 <box size="0.001 0.001 0.001"/>
             </geometry>
         </visual>
-    </link> -->
-  <!-- <joint name="floating_base" type="fixed">
+    </link>
+    <joint name="floating_base" type="fixed">
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="base"/>
         <child link="trunk"/>
-    </joint> -->
+    </joint>
   <link name="trunk">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>

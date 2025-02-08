@@ -63,10 +63,10 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             'FR_hip_joint': -0.1 ,  # [rad]
             'RR_hip_joint': -0.1,   # [rad]
 
-            'FL_thigh_joint': 0.6,     # [rad]
-            'RL_thigh_joint': 0.6,   # [rad]
-            'FR_thigh_joint': 0.6,     # [rad]
-            'RR_thigh_joint': 0.6,   # [rad]
+            'FL_thigh_joint': 0.3,     # [rad]
+            'RL_thigh_joint': 0.9,   # [rad]
+            'FR_thigh_joint': 0.3,     # [rad]
+            'RR_thigh_joint': 0.9,   # [rad]
 
             'FL_calf_joint': -1.2,   # [rad]
             'RL_calf_joint': -1.2,    # [rad]
@@ -139,8 +139,8 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         file = '{ROOT_DIR}/resources/wl4/urdf/robot.urdf'
         foot_name = "foot"
         name = "wl4v2"
-        penalize_contacts_on = ["thigh", "calf"]
-        terminate_after_contacts_on = ["base", "calf"]
+        penalize_contacts_on = ["thigh", "calf", "base"]
+        terminate_after_contacts_on = []
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = True
@@ -165,24 +165,27 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             # action_smoothness=-0.001
             # stand_still = 0.0
 
-            torques = 0.0
-            powers = -2e-5
             termination = 0.0
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
+            orientation= -0.0 # -0
+            torques = 0.0 #-0.00001
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -2.0
-            feet_air_time = 0.
+            base_height = -2.0 # 0
+            feet_air_time = 0 # 1
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.01
-            action_smoothness= 0
             stand_still = 0.0
+
+            powers = -2e-5
+            action_smoothness= 0
             foot_clearance= -0.0
-            orientation=-0.2
+            first_air_new = 0.05
+
             # foot_relative_x= -0.01
             # foot_wheel_vel= 0.5
             # foot_relative_z= -1.5
@@ -243,7 +246,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         soft_dof_pos_limit = 0.9  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
-        base_height_target = 0.40
+        base_height_target = 0.80
         max_contact_force = 500.  # forces above this value are penalized
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -336,10 +339,12 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         num_costs = 3
     
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = 'plane'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
-
+        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
+        terrain_proportions = [0.1, 0.1, 0.3, 0.1, 0.2, 0.0, 0.0]
+        # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 class Wl4V2ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
@@ -377,7 +382,7 @@ class Wl4V2ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
         # policy_class_name = 'ActorCriticTransBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'
         algorithm_class_name = 'NP3O'
-        max_iterations = 20000
+        max_iterations = 3000
         num_steps_per_env = 24
         resume = False
         resume_path = ''
