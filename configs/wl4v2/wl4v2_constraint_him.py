@@ -174,7 +174,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             torques = 0.0 #-0.00001
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -2.0 # 0
+            base_height = -0.0 # 0
             feet_air_time = 0 # 1
             collision = -1.0
             feet_stumble = 0.0
@@ -184,7 +184,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             powers = -2e-5
             action_smoothness= 0
             foot_clearance= -0.0
-            first_air_new = 0.05
+            first_air_new = 0.0
 
             # foot_relative_x= -0.01
             # foot_wheel_vel= 0.5
@@ -246,8 +246,8 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         soft_dof_pos_limit = 0.9  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
-        base_height_target = 0.80
-        max_contact_force = 500.  # forces above this value are penalized
+        base_height_target = 0.50
+        max_contact_force = 250.  # forces above this value are penalized
 
     class domain_rand( LeggedRobotCfg.domain_rand):
         randomize_friction = True
@@ -339,7 +339,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         num_costs = 3
     
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'  # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
