@@ -374,14 +374,14 @@
     <visual>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
     </collision>
     <inertial>
@@ -452,7 +452,7 @@
     <child link="FR_foot"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
+    <limit effort="12" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
   </joint>
   <link name="FR_foot">
     <visual>
@@ -515,14 +515,14 @@
     <visual>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
     </collision>
     <inertial>
@@ -593,7 +593,7 @@
     <child link="FL_foot"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
+    <limit effort="12" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
   </joint>
   <link name="FL_foot">
     <visual>
@@ -656,14 +656,14 @@
     <visual>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
     </collision>
     <inertial>
@@ -734,7 +734,7 @@
     <child link="RR_foot"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
+    <limit effort="12" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
   </joint>
   <link name="RR_foot">
     <visual>
@@ -797,14 +797,14 @@
     <visual>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.05" radius="0.04"/>
+        <cylinder length="0.05" radius="0.05"/>
       </geometry>
     </collision>
     <inertial>
@@ -875,7 +875,7 @@
     <child link="RL_foot"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
+    <limit effort="12" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
   </joint>
   <link name="RL_foot">
     <visual>

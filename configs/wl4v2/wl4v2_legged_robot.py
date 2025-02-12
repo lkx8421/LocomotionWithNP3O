@@ -736,7 +736,7 @@ class Wl4V2LeggedRobot(BaseTask):
         control_type = self.cfg.control.control_type
         if control_type=="P":
             if not self.cfg.domain_rand.randomize_kpkd:  # TODO add strength to gain directly
-                torques = self.p_gains*(joint_pos_target- self.dof_pos) - self.d_gains*self.dof_vel
+                torques = self.p_gains*(joint_pos_target - self.dof_pos) - self.d_gains*self.dof_vel
             else:
                 torques = self.kp_factor * self.p_gains*(joint_pos_target - self.dof_pos) - self.kd_factor * self.d_gains*self.dof_vel
         elif control_type=="V":
@@ -1401,6 +1401,10 @@ class Wl4V2LeggedRobot(BaseTask):
         self.feet_air_time *= ~contact_filt
         return rew_airTime
 
+    def _reward_feet_all_contact(self):
+        contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+        return torch.sum(contact, dim=1)
+
     def _reward_stumble(self):
         # Penalize feet hitting vertical surfaces
         return torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) >\
@@ -1607,8 +1611,10 @@ class Wl4V2LeggedRobot(BaseTask):
         #return flag * 1.*(torch.abs(torch.sum(self.dof_pos[:, [0, 3, 6, 9]],dim=-1)) > 0.0)
 
     def _reward_foot_mirror(self):
-        diff1 = torch.sum(torch.square(self.dof_pos[:,[0,1,2]] - self.dof_pos[:,[9,10,11]]),dim=-1)
-        diff2 = torch.sum(torch.square(self.dof_pos[:,[3,4,5]] - self.dof_pos[:,[6,7,8]]),dim=-1)
+        # RL foot mirror RR foot, FL foot mirror FR foot
+        mirror = torch.tensor([-1, 1, 1], device=self.device)
+        diff1 = torch.sum(torch.square(self.dof_pos[:,[0,1,2]] - self.dof_pos[:,[4,5,6]] * mirror),dim=-1)
+        diff2 = torch.sum(torch.square(self.dof_pos[:,[8,9,10]] - self.dof_pos[:,[12,13,14]] * mirror),dim=-1)
         return 0.5*(diff1 + diff2)
     
     def _reward_trot_contact(self):

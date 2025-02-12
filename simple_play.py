@@ -28,8 +28,10 @@ def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
     env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
+    # env_cfg.terrain.mesh_type = 'plane'
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
+    env_cfg.terrain.terrain_proportions = [0, 0, 0, 0, 0, 0, 0]
     env_cfg.terrain.curriculum = False
     env_cfg.noise.add_noise = False
     #env_cfg.terrain.mesh_type = 'plane'
@@ -61,22 +63,32 @@ def play(args):
                                                       **policy_cfg_dict)
     print(policy)
     #model_dict = torch.load(os.path.join(ROOT_DIR, 'model_4000_phase2_hip.pt'))
-    if 1:
+    if 0:
       log_root = os.path.join(ROOT_DIR, 'logs', train_cfg.runner.experiment_name)
       resume_path = get_load_path(log_root, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
     else:
       resume_path = os.path.join(ROOT_DIR, 'model_6000.pt')
     model_dict = torch.load(resume_path)
     print("resume_path", resume_path)
+    # export the policy
     policy.load_state_dict(model_dict['model_state_dict'])
     policy.half()
     policy.eval()
     policy = policy.to(env.device)
-    policy.save_torch_jit_policy('model_vqvae.pt',env.device)
+    policy.save_torch_jit_policy('model.pt',env.device)
 
     # clear images under frames folder
     # frames_path = os.path.join(ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames')
     # delete_files_in_directory(frames_path)
+    # logger for plot
+    logger = Logger(env.dt)
+    robot_index = 0 # which robot is used for logging
+    joint_index = 1 # which joint is used for logging
+    start_state_log = 1000 # number of steps before plotting states
+
+    stop_state_log = 2000 # number of steps before plotting states
+    stop_rew_log = env.max_episode_length + 1 # number of steps before print average episode rewards
+
 
     # set rgba camera sensor for debug and doudle check
     camera_local_transform = gymapi.Transform()
@@ -92,7 +104,7 @@ def play(args):
 
     img_idx = 0
 
-    video_duration = 20
+    video_duration = 200
     num_frames = int(video_duration / env.dt)
     print(f'gathering {num_frames} frames')
     video = None
@@ -127,7 +139,38 @@ def play(args):
             if video is None:
                 video = cv2.VideoWriter('record.mp4', cv2.VideoWriter_fourcc(*'MP4V'), int(1 / env.dt), (img.shape[1],img.shape[0]))
             video.write(img)
-            img_idx += 1 
+            img_idx += 1
+        if PLOT_STATES:
+            if i < stop_state_log and i > start_state_log:
+                logger.log_states(
+                    {
+                        'dof_pos_target': actions[robot_index, joint_index].item() * env.cfg.control.action_scale,
+                        'dof_pos': env.dof_pos[robot_index, joint_index].item(),
+                        'dof_vel': env.dof_vel[robot_index, joint_index].item(),
+                        'dof_torque': env.torques[robot_index, joint_index].item(),
+                        'command_x': env.commands[robot_index, 0].item(),
+                        'command_y': env.commands[robot_index, 1].item(),
+                        'command_yaw': env.commands[robot_index, 2].item(),
+                        'base_vel_x': env.base_lin_vel[robot_index, 0].item(),
+                        'base_vel_y': env.base_lin_vel[robot_index, 1].item(),
+                        'base_vel_z': env.base_lin_vel[robot_index, 2].item(),
+                        'base_vel_yaw': env.base_ang_vel[robot_index, 2].item(),
+                        'contact_forces_z': env.contact_forces[robot_index, env.feet_indices, 2].cpu().numpy(),
+                        'base_height': env.root_states[robot_index, 2].item(),
+                        'command_height': env.cfg.rewards.base_height_target,
+                        'torques': env.torques[robot_index, :].tolist(),
+                        'velocities': env.dof_vel[robot_index, :].tolist(),
+                    }
+                )
+            elif i==stop_state_log:
+                logger.plot_states()
+            # if  0 < i < stop_rew_log:
+            #     if infos["episode"]:
+            #         num_episodes = torch.sum(env.reset_buf).item()
+            #         if num_episodes>0:
+            #             logger.log_rewards(infos["episode"], num_episodes)
+            # elif i==stop_rew_log:
+            #     logger.print_rewards()
     print("action rate:",action_rate/num_frames)
     print("z vel:",z_vel/num_frames)
     print("xy_vel:",xy_vel/num_frames)
@@ -143,7 +186,7 @@ def play(args):
     print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=10))
 
 if __name__ == '__main__':
-  
     RECORD_FRAMES = True
+    PLOT_STATES = True
     args = get_args()
     play(args)

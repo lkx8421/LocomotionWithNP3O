@@ -140,7 +140,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         foot_name = "foot"
         name = "wl4v2"
         penalize_contacts_on = ["thigh", "calf", "base"]
-        terminate_after_contacts_on = []
+        terminate_after_contacts_on = ["thigh"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = True
@@ -171,7 +171,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation= -0.0 # -0
-            torques = 0.0 #-0.00001
+            torques = -1e-5 # -0.00001
             dof_vel = 0.0
             dof_acc = -2.5e-7
             base_height = -0.0 # 0
@@ -182,10 +182,11 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             stand_still = 0.0
 
             powers = -2e-5
-            action_smoothness= 0
+            action_smoothness= -0.001
             foot_clearance= -0.0
-            first_air_new = 0.0
-
+            # first_air_new = 0.0
+            # foot_mirror = -0.2 # 不好使
+            # feet_all_contact = 0.01 # 不好使
             # foot_relative_x= -0.01
             # foot_wheel_vel= 0.5
             # foot_relative_z= -1.5

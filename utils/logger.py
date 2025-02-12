@@ -92,11 +92,39 @@ class Logger:
                                                                     label='measured')
         a.set(xlabel='Joint vel [rad/s]', ylabel='Joint Torque [Nm]', title='Torque/velocity curves')
         a.legend()
-        # plot torques
+        # plot torque
+        # a = axs[2, 2]
+        # if log["dof_torque"] != []: a.plot(time, log["dof_torque"], label='measured')
+        # a.set(xlabel='time [s]', ylabel='Joint Torque [Nm]', title='Torque')
+        # a.legend()
+        # plot torques for each joint
+
+        # base height
         a = axs[2, 2]
-        if log["dof_torque"] != []: a.plot(time, log["dof_torque"], label='measured')
-        a.set(xlabel='time [s]', ylabel='Joint Torque [Nm]', title='Torque')
+        if log["base_height"] : a.plot(time, log["base_height"], label='measured')
+        if log["command_height"]: a.plot(time, log["command_height"], label='target')
+        a.set(xlabel='time [s]', ylabel='base height [m]', title='Base height')
         a.legend()
+
+        # another plot
+        if log["torques"]:
+            num_joints = len(log["torques"][0])
+            fig2, axs2 = plt.subplots(4, num_joints // 4, figsize=(12, 8))
+            for joint_idx in range(num_joints):
+                a = axs2[joint_idx % 4, joint_idx // 4]  # 这里你可能需要根据实际情况调整 axs 的索引
+                # 遍历每个时间步，获取对应关节的扭矩
+                joint_torques = [torque[joint_idx] for torque in log["torques"]]
+                a.plot(time, joint_torques, label='torque')
+                a.set(xlabel='time [s]', ylabel='Joint Torque [Nm]', title=f'Joint {joint_idx} Torque ')
+                a.legend()
+                if log["velocities"]:
+                    a2 = a.twinx()
+                    joint_velocities = [vel[joint_idx] for vel in log["velocities"]]
+                    a2.plot(time, joint_velocities, 'r--', label='Velocity')  # 红色虚线曲线
+                    a2.set_ylabel('Joint Velocity [rad/s]', color='r')
+                    a2.legend()
+
+        plt.tight_layout()
         plt.show()
 
     def print_rewards(self):
