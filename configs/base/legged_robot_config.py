@@ -172,7 +172,7 @@ class LeggedRobotCfg(BaseConfig):
             base_height = -1.0
             action_rate = -0.01
             action_smoothness=-0.01
-            foot_clearance= -0.01
+            # foot_clearance= -0.01
             orientation=-0.2
 
 

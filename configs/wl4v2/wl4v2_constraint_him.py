@@ -126,7 +126,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         max_curriculum = 1.
         num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
-        heading_command = True  # if true: compute ang vel command from heading error
+        heading_command = False  # if true: compute ang vel command from heading error
         global_reference = False
 
         class ranges:
@@ -140,13 +140,13 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         foot_name = "foot"
         name = "wl4v2"
         penalize_contacts_on = ["thigh", "calf", "base"]
-        terminate_after_contacts_on = ["thigh"]
-        self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
+        terminate_after_contacts_on = ["hip"]
+        self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = True
   
     class rewards( LeggedRobotCfg.rewards ):
-
+        clearance_height_target = -0.3
         class scales( LeggedRobotCfg.rewards.scales ):
             # torques = -0.0001
             # termination = 0.0
@@ -175,7 +175,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             dof_vel = 0.0
             dof_acc = -2.5e-7
             base_height = -0.0 # 0
-            feet_air_time = 0 # 1
+            feet_air_time = 0.0 # 1
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.01
@@ -183,9 +183,19 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
 
             powers = -2e-5
             action_smoothness= -0.001
-            foot_clearance= -0.0
-            # first_air_new = 0.0
-            # foot_mirror = -0.2 # 不好使
+            foot_mirror = -0.5
+            hip_pos = -0.3
+            foot_swing_clearance = -0.0
+
+            front_feet_air = 0.0
+
+            # foot_clearance= -0.0
+            # front_rear_feet_air = 0.1
+            # # two wheel stand
+            # front_feet_air = 1
+            # head_pitch = 2
+
+            # trot_contact = 1
             # feet_all_contact = 0.01 # 不好使
             # foot_relative_x= -0.01
             # foot_wheel_vel= 0.5

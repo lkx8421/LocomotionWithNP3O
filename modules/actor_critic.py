@@ -2703,6 +2703,8 @@ class ActorCriticBarlowTwins(nn.Module):
         hist_demo_input = torch.randn(1,self.num_hist,self.num_prop-3).half().to(device)
         model_jit = torch.jit.trace(self.actor_teacher_backbone,(obs_demo_input,hist_demo_input))
         model_jit.save(path)
+        obs_demo_input = torch.randn(1,self.num_prop-3).to(device)
+        hist_demo_input = torch.randn(1,self.num_hist,self.num_prop-3).to(device)
         torch_out = torch.onnx.export(self.actor_teacher_backbone,
                             (obs_demo_input,hist_demo_input),
                             "policy.onnx",

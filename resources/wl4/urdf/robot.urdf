@@ -334,8 +334,8 @@
     </collision>
     <inertial>
       <origin rpy="0 0 0" xyz="0.000458 0.005261 0.000665"/>
-      <mass value="8.1"/>
-      <inertia ixx="0.020355840695440063" ixy="-0.000622" ixz="-0.00315" iyy="0.07869304467493723" iyz="-0.00139" izz="0.08763846800538075"/>
+      <mass value="16.2"/>
+      <inertia ixx="0.08142336278176025" ixy="-0.000622" ixz="-0.00315" iyy="0.31477217869974894" iyz="-0.00139" izz="0.350553872021523"/>
     </inertial>
   </link>
   <joint name="imu_joint" type="fixed">
