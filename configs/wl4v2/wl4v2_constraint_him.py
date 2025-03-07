@@ -41,7 +41,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
         num_actions = 16
     class init_state( LeggedRobotCfg.init_state ):
-        pos = [0.0, 0.0, 0.49] # x,y,z [m]
+        pos = [0.0, 0.0, 0.60] # x,y,z [m]
         """
           unitree go2 sdk order:
                -0.1 <-3 FR_hip_joint 0 -> 0.0
@@ -58,24 +58,24 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
                -1.5 <- 8 RL_calf_joint 11 -> -1.8
         """
         default_joint_angles = { # = target angles [rad] when action = 0.0
-            'FL_hip_joint': 0.1,   # [rad]
-            'RL_hip_joint': 0.1,   # [rad]
-            'FR_hip_joint': -0.1 ,  # [rad]
-            'RR_hip_joint': -0.1,   # [rad]
+            'FL_hip_joint': 0.0,   # [rad]
+            'RL_hip_joint': 0.0,   # [rad]
+            'FR_hip_joint': -0.0 ,  # [rad]
+            'RR_hip_joint': -0.0,   # [rad]
 
-            'FL_thigh_joint': 0.3,     # [rad]
-            'RL_thigh_joint': 0.9,   # [rad]
-            'FR_thigh_joint': 0.3,     # [rad]
-            'RR_thigh_joint': 0.9,   # [rad]
+            'FL_thigh_joint': 0.0,     # [rad]
+            'FR_thigh_joint': 0.0,     # [rad]
+            'RL_thigh_joint': 0.6,   # [rad]
+            'RR_thigh_joint': 0.6,   # [rad]
 
-            'FL_calf_joint': -1.2,   # [rad]
+            'FL_calf_joint': -0.9,   # [rad]
+            'FR_calf_joint': -0.9,  # [rad]
             'RL_calf_joint': -1.2,    # [rad]
-            'FR_calf_joint': -1.2,  # [rad]
             'RR_calf_joint': -1.2,    # [rad]
 
             'FL_foot_joint':0.0,
-            'RL_foot_joint':0.0,
             'FR_foot_joint':0.0,
+            'RL_foot_joint':0.0,
             'RR_foot_joint':0.0,
         }
 
@@ -126,7 +126,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         max_curriculum = 1.
         num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
-        heading_command = False  # if true: compute ang vel command from heading error
+        heading_command = True  # if true: compute ang vel command from heading error
         global_reference = False
 
         class ranges:
@@ -140,7 +140,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         foot_name = "foot"
         name = "wl4v2"
         penalize_contacts_on = ["thigh", "calf", "base"]
-        terminate_after_contacts_on = ["hip"]
+        terminate_after_contacts_on = []
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = True
@@ -148,116 +148,58 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         clearance_height_target = -0.3
         class scales( LeggedRobotCfg.rewards.scales ):
-            # torques = -0.0001
-            # termination = 0.0
-            # tracking_lin_vel = 1.0
-            # tracking_ang_vel = 0.5
-            # lin_vel_z = -2.0
-            # ang_vel_xy = -0.05
-            # orientation = -0.2
-            # dof_vel = 0.0
-            # dof_acc = -2.5e-7
-            # base_height = -1
-            # feet_air_time = 1.0
-            # collision = 0.0
-            # feet_stumble = 0.0
-            # action_rate = -0.01
-            # action_smoothness=-0.001
-            # stand_still = 0.0
 
             termination = 0.0
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
-            orientation= -0.0 # -0
+            orientation = -0.2 # -0
             torques = -1e-5 # -0.00001
-            dof_vel = 0.0
+            dof_pos_limits = -10.0
+            dof_vel = -0.0
             dof_acc = -2.5e-7
-            base_height = -0.0 # 0
+            base_height = -1.0 # 0
             feet_air_time = 0.0 # 1
             collision = -1.0
             feet_stumble = 0.0
-            action_rate = -0.01
-            stand_still = 0.0
+            action_rate = -0.002
+            stand_still = -0.005
 
             powers = -2e-5
             action_smoothness= -0.001
-            foot_mirror = -0.5
+
+            foot_mirror = -0.05
             hip_pos = -0.3
             foot_swing_clearance = -0.0
-
-            front_feet_air = 0.0
-
+            climb_height = 0.5
+            # climb_lift_feet = 0.5
+            # foot_clearance = -0.01
+            # feet_relative_x = -1.0
+            # contact_body_pitch = 1.2
+            # front_feet_air = 1.0
+            # feet_upper_height = 2.0
+            # stand_joint_pos = 0.8
+            # stand_height = 0.5
+            
+            # feet_lin_pos_z = 1.2
+            # position_tracking = 1.5
+            # feet_lin_vel_z = 10.0
+            # feet_height = 2.0 # 有点上坡
+            # climbing_50cm = 1.5
+            # front_feet_air = -1.0
             # foot_clearance= -0.0
             # front_rear_feet_air = 0.1
             # # two wheel stand
             # front_feet_air = 1
             # head_pitch = 2
 
-            # trot_contact = 1
-            # feet_all_contact = 0.01 # 不好使
-            # foot_relative_x= -0.01
-            # foot_wheel_vel= 0.5
-            # foot_relative_z= -1.5
-            # foot_wheel_zero_vel = -0.00001
-            # foot_lift= -0.01
-
-            # torques = -0.00001
-            # termination = 0.0
-            # tracking_lin_vel = 1.0
-            # tracking_ang_vel = 0.5
-            # # tracking_target = 1.0
-            # lin_vel_z = -2.0
-            # ang_vel_xy = -0.05
-            # orientation = 0.0
-            # dof_vel = 0.0
-            # dof_acc = 0.0
-            # base_height = 0.0
-            # feet_air_time = 1.0
-            # collision = 0.0
-            # feet_stumble = 0.0
-            # action_rate = -0.01
-            # stand_still = 0.0
-
-            # torques = -0.0002
-            # termination = 0.0
-            # tracking_lin_vel = 1.0
-            # tracking_ang_vel = 0.5
-            # lin_vel_z = -2.0
-            # ang_vel_xy = -0.05
-            # orientation = 0.0
-            # dof_vel = 0.0
-            # dof_acc = 0.0
-            # base_height = 0.0
-            # feet_air_time = 1.0
-            # collision = 0.0
-            # feet_stumble = 0.0
-            # action_rate = -0.01
-            # stand_still = 0.0
-            
-            # torques = -0.0002
-            # termination = 0.0
-            # tracking_lin_vel = 1.0
-            # tracking_ang_vel = 0.5
-            # # tracking_target = 1.0
-            # lin_vel_z = -2.0
-            # ang_vel_xy = -0.05
-            # orientation = 0.0
-            # dof_vel = 0.0
-            # dof_acc = 0.0
-            # base_height = 0.0
-            # feet_air_time = 1.0
-            # collision = 0.0
-            # feet_stumble = 0.0
-            # action_rate = -0.01
-            # stand_still = 0.0
-        only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
         soft_dof_pos_limit = 0.9  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
-        base_height_target = 0.50
+        base_height_target = 0.51
         max_contact_force = 250.  # forces above this value are penalized
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -320,8 +262,8 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             dof_vel_limits = 0.1
             #foot_slide = 1
             #foot_nocontact_regular = 1
-            #feet_air_time = 1
-            #foot_mirror = 0.1
+            # feet_air_time = 1
+            # foot_mirror = -0.1
             # trot_contact=0.1
             # stand_still=0.1
             # #idol_contact = 0.1
@@ -353,8 +295,8 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
-        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
-        terrain_proportions = [0.1, 0.1, 0.3, 0.1, 0.2, 0.0, 0.0]
+        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
+        terrain_proportions = [0.1, 0.1, 0.0, 0.0, 0.2, 0.0, 0.0]
         # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 class Wl4V2ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):

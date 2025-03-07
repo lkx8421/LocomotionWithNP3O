@@ -2708,7 +2708,7 @@ class ActorCriticBarlowTwins(nn.Module):
         torch_out = torch.onnx.export(self.actor_teacher_backbone,
                             (obs_demo_input,hist_demo_input),
                             "policy.onnx",
-                            verbose=True,
+                            verbose=False,
                             export_params=True
                             )
         # print(torch_out)

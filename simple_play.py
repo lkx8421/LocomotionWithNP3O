@@ -31,6 +31,7 @@ def play(args):
     # env_cfg.terrain.mesh_type = 'plane'
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
+    # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
     env_cfg.terrain.terrain_proportions = [0, 0, 0, 0, 0, 0, 0]
     env_cfg.terrain.curriculum = False
     env_cfg.noise.add_noise = False
@@ -61,18 +62,19 @@ def play(args):
                                                       env.cfg.env.history_len,
                                                       env.num_actions,
                                                       **policy_cfg_dict)
-    print(policy)
-    #model_dict = torch.load(os.path.join(ROOT_DIR, 'model_4000_phase2_hip.pt'))
-    if 0:
-      log_root = os.path.join(ROOT_DIR, 'logs', train_cfg.runner.experiment_name)
-      resume_path = get_load_path(log_root, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
-    else:
-      resume_path = os.path.join(ROOT_DIR, 'model_6000.pt')
+
+    if args.load_run is not None:
+      train_cfg.runner.load_run = args.load_run
+    if args.checkpoint is not None:
+      train_cfg.runner.checkpoint = args.checkpoint
+    log_root = os.path.join(ROOT_DIR, 'logs', train_cfg.runner.experiment_name)
+    resume_path = get_load_path(log_root, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
+
     model_dict = torch.load(resume_path)
     print("resume_path", resume_path)
     # export the policy
     policy.load_state_dict(model_dict['model_state_dict'])
-    policy.half()
+    # policy.half()
     policy.eval()
     policy = policy.to(env.device)
     policy.save_torch_jit_policy('model.pt',env.device)
@@ -156,7 +158,7 @@ def play(args):
                         'base_vel_z': env.base_lin_vel[robot_index, 2].item(),
                         'base_vel_yaw': env.base_ang_vel[robot_index, 2].item(),
                         'contact_forces_z': env.contact_forces[robot_index, env.feet_indices, 2].cpu().numpy(),
-                        'base_height': env.root_states[robot_index, 2].item(),
+                        'base_height': env._get_base_heights()[robot_index].item(),
                         'command_height': env.cfg.rewards.base_height_target,
                         'torques': env.torques[robot_index, :].tolist(),
                         'velocities': env.dof_vel[robot_index, :].tolist(),
@@ -171,19 +173,19 @@ def play(args):
             #             logger.log_rewards(infos["episode"], num_episodes)
             # elif i==stop_rew_log:
             #     logger.print_rewards()
-    print("action rate:",action_rate/num_frames)
-    print("z vel:",z_vel/num_frames)
-    print("xy_vel:",xy_vel/num_frames)
-    print("feet air reward",feet_air_time/num_frames)
+    # print("action rate:",action_rate/num_frames)
+    # print("z vel:",z_vel/num_frames)
+    # print("xy_vel:",xy_vel/num_frames)
+    # print("feet air reward",feet_air_time/num_frames)
 
     video.release()
 
     #test model profile
-    with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA]) as prof:
-         for i in range(1000):
-            with torch.no_grad():
-              actions = policy.act_teacher(obs.half())
-    print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=10))
+    # with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA]) as prof:
+    #      for i in range(1000):
+    #         with torch.no_grad():
+    #           actions = policy.act_teacher(obs.half())
+    # print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=10))
 
 if __name__ == '__main__':
     RECORD_FRAMES = True
