@@ -30,7 +30,7 @@
 
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
-class Wl4V3ConstraintHimRoughCfg( LeggedRobotCfg ):
+class Wl4ConstraintHimRoughCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         num_envs = 4096
 
@@ -136,9 +136,9 @@ class Wl4V3ConstraintHimRoughCfg( LeggedRobotCfg ):
             heading = [-3.14, 3.14]
 
     class asset( LeggedRobotCfg.asset ):
-        file = '{ROOT_DIR}/resources/wl4ver2/urdf/robot.urdf'
+        file = '{ROOT_DIR}/resources/wl4/urdf/robot.urdf'
         foot_name = "foot"
-        name = "wl4v3"
+        name = "wl4"
         penalize_contacts_on = ["thigh", "calf", "base"]
         terminate_after_contacts_on = []
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
@@ -298,7 +298,7 @@ class Wl4V3ConstraintHimRoughCfg( LeggedRobotCfg ):
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
         terrain_proportions = [0.1, 0.1, 0.0, 0.0, 0.2, 0.0, 0.0]
         # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-class Wl4V3ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
+class Wl4ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
         learning_rate = 1.e-3
@@ -330,7 +330,7 @@ class Wl4V3ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
       
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = 'test_barlowtwins_feetcontact'
-        experiment_name = 'rough_wl4v3_constraint'
+        experiment_name = 'rough_wl4_constraint'
         policy_class_name = 'ActorCriticBarlowTwins'
         # policy_class_name = 'ActorCriticTransBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'

@@ -105,13 +105,13 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
-        stiffness = {'hip': 50.,
-                     'thigh': 50.,
-                     'calf': 50.,
-                     'foot': 0.}  # [N*m/rad]
-        damping = {'hip': 2,
-                   'thigh': 2,
-                   'calf': 2,
+        stiffness = {'hip': 30.,
+                     'thigh': 30.,
+                     'calf': 30.,
+                     'foot': 2.}  # [N*m/rad]
+        damping = {'hip': 1.0,
+                   'thigh': 1.0,
+                   'calf': 1.0,
                    'foot': 0.5}     #  [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
@@ -136,14 +136,14 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             heading = [-3.14, 3.14]
 
     class asset( LeggedRobotCfg.asset ):
-        file = '{ROOT_DIR}/resources/wl4/urdf/robot.urdf'
+        file = '{ROOT_DIR}/resources/wl4ver2/urdf/robot.urdf'
         foot_name = "foot"
         name = "wl4v2"
         penalize_contacts_on = ["thigh", "calf", "base"]
         terminate_after_contacts_on = []
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
-        flip_visual_attachments = True
+        flip_visual_attachments = False
   
     class rewards( LeggedRobotCfg.rewards ):
         clearance_height_target = -0.3
@@ -164,7 +164,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.002
-            stand_still = -0.005
+            stand_still = -0.01
 
             powers = -2e-5
             action_smoothness= -0.001
@@ -218,7 +218,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         randomize_motor = True
         motor_strength_range = [0.8, 1.2]
 
-        randomize_kpkd = True
+        randomize_kpkd = False
         kp_range = [0.8,1.2]
         kd_range = [0.8,1.2]
 

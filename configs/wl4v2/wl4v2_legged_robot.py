@@ -733,10 +733,16 @@ class Wl4V2LeggedRobot(BaseTask):
 
         control_type = self.cfg.control.control_type
         if control_type=="P":
+            vel_list = [3,7,11,15]
             if not self.cfg.domain_rand.randomize_kpkd:  # TODO add strength to gain directly
                 torques = self.p_gains*(joint_pos_target - self.dof_pos) - self.d_gains*self.dof_vel
+                torques[:,vel_list] = self.p_gains[vel_list] * actions_scaled[:,vel_list] - self.d_gains[vel_list] * self.dof_vel[:,vel_list]
+                # torques[:,vel_list] = self.d_gains[vel_list] * (actions_scaled[:,vel_list] -  self.dof_vel[:,vel_list])
+                
             else:
                 torques = self.kp_factor * self.p_gains*(joint_pos_target - self.dof_pos) - self.kd_factor * self.d_gains*self.dof_vel
+                torques[:,vel_list] = self.kp_factor[:,vel_list]  * self.p_gains[:,vel_list] * actions_scaled[:,vel_list]
+                - self.kd_factor[:,vel_list] *self.d_gains[:,vel_list] * self.dof_vel[:,vel_list]
         elif control_type=="V":
             torques = self.p_gains*(actions_scaled - self.dof_vel) - self.d_gains*(self.dof_vel - self.last_dof_vel)/self.sim_params.dt
         elif control_type=="T":
@@ -744,10 +750,9 @@ class Wl4V2LeggedRobot(BaseTask):
         else:
             raise NameError(f"Unknown controller type: {control_type}")
         # torques[:,[3, 7, 11, 15]] = self.kp_factor[:,[3, 7, 11, 15]] * 2*(actions_scaled[:,[3, 7, 11, 15]] - self.dof_vel[:,[3, 7, 11, 15]]) - self.kd_factor[:,[3, 7, 11, 15]] * 0.01*(self.dof_vel[:,[3, 7, 11, 15]] - self.last_dof_vel[:,[3, 7, 11, 15]])/self.sim_params.dt
-        torques[:,[3, 7, 11, 15]] = self.kp_factor[:,[3, 7, 11, 15]]  * 10*(actions_scaled[:,[3, 7, 11, 15]]) - 0.5*self.kd_factor[:,[3, 7, 11, 15]] *(self.dof_vel[:,[3, 7, 11, 15]])
         # torques[:,[3, 7, 11, 15]] = 0.5*self.kd_factor[:,[3, 7, 11, 15]]*(joint_pos_target[:,[3, 7, 11, 15]] - self.dof_vel[:,[3, 7, 11, 15]])
 
-        torques = torques * self.motor_strength
+        # torques = torques * self.motor_strength
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
     def check_termination(self):

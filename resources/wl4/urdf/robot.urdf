@@ -296,40 +296,40 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.2 0.2 0.1"/>
+        <box size="0.2 0.2 0.3"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <visual>
       <origin rpy="0 0 0" xyz="0.325 0 0"/>
       <geometry>
-        <box size="0.1 0.2 0.1"/>
+        <box size="0.1 0.2 0.3"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <visual>
       <origin rpy="0 0 0" xyz="-0.325 0 0"/>
       <geometry>
-        <box size="0.1 0.2 0.1"/>
+        <box size="0.1 0.2 0.3"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.2 0.2 0.1"/>
+        <box size="0.2 0.2 0.3"/>
       </geometry>
     </collision>
     <collision>
       <origin rpy="0 0 0" xyz="0.325 0 0"/>
       <geometry>
-        <box size="0.1 0.2 0.1"/>
+        <box size="0.1 0.2 0.3"/>
       </geometry>
     </collision>
     <collision>
       <origin rpy="0 0 0" xyz="-0.325 0 0"/>
       <geometry>
-        <box size="0.1 0.2 0.1"/>
+        <box size="0.1 0.2 0.3"/>
       </geometry>
     </collision>
     <inertial>
