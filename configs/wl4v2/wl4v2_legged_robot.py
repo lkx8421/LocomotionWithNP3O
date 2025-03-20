@@ -20,6 +20,26 @@ import cv2
 from configs import LeggedRobotCfg
 from global_config import ROOT_DIR
 
+def quat_to_rot_matrix(quat):
+    """
+    将四元数转换为旋转矩阵。
+
+    Args:
+        quat (torch.Tensor): 输入的四元数张量，形状为 (N, 4)，其中 N 是样本数量。
+
+    Returns:
+        torch.Tensor: 输出的旋转矩阵张量，形状为 (N, 3, 3)。
+    """
+    x, y, z, w = quat.unbind(-1)
+    x2, y2, z2 = x * x, y * y, z * z
+    xy, xz, yz = x * y, x * z, y * z
+    wx, wy, wz = w * x, w * y, w * z
+    return torch.stack([
+        1 - 2 * (y2 + z2), 2 * (xy - wz), 2 * (xz + wy),
+        2 * (xy + wz), 1 - 2 * (x2 + z2), 2 * (yz - wx),
+        2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (x2 + y2)
+    ], dim=-1).reshape(-1, 3, 3)
+
 class Wl4V2LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         """ Parses the provided config file,
@@ -587,7 +607,7 @@ class Wl4V2LeggedRobot(BaseTask):
         env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0).nonzero(as_tuple=False).flatten()
         self._resample_commands(env_ids)
         self._process_phase()
-
+        self._update_climb_condition()
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
             heading = torch.atan2(forward[:, 1], forward[:, 0])
@@ -753,6 +773,7 @@ class Wl4V2LeggedRobot(BaseTask):
         # torques[:,[3, 7, 11, 15]] = 0.5*self.kd_factor[:,[3, 7, 11, 15]]*(joint_pos_target[:,[3, 7, 11, 15]] - self.dof_vel[:,[3, 7, 11, 15]])
 
         # torques = torques * self.motor_strength
+        print(torques[0, :])
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
     def check_termination(self):
@@ -1319,6 +1340,26 @@ class Wl4V2LeggedRobot(BaseTask):
 
         return base_height
 
+    def _update_climb_condition(self):
+        roll, pitch, yaw = get_euler_xyz(self.base_quat)
+        quat_only_yaw = quat_from_euler_xyz(torch.zeros_like(roll), torch.zeros_like(pitch), yaw)
+
+        cur_footvel_translated = self.feet_vel # feet velocity in move base frame ,but z axis always vertical of ground
+        footvel_in_body_frame = torch.zeros(self.num_envs, len(self.feet_indices), 3, device=self.device)
+        for i in range(len(self.feet_indices)):
+            footvel_in_body_frame[:, i, :] = quat_rotate_inverse(quat_only_yaw, cur_footvel_translated[:, i, :])
+        bool_front = torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 0:2, 0] < 0.1, dim=1))
+        bool_rear =  torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 2:4, 0] < 0.1, dim=1))
+        # position condition
+        feet_pos_z = self.feet_pos[:, :, 2] - 0.0875 
+        self.front_climb = torch.logical_and(bool_front, torch.any(feet_pos_z[:, 0:2] < -0.01, dim=1))
+        self.rear_climb = torch.logical_and(bool_rear, torch.any(feet_pos_z[:, 2:4] < -0.01, dim=1))
+        self.rear_climb *= ~self.front_climb
+        # feet_contact_x = self.contact_forces[:, self.feet_indices, 0] < -1
+        # bool_front = torch.any(feet_contact_x[:, 0:2], dim=1)
+        # bool_rear = torch.any(feet_contact_x[:, 2:4], dim=1)
+        # feet air
+    
     #------------ reward functions----------------
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
@@ -1335,6 +1376,16 @@ class Wl4V2LeggedRobot(BaseTask):
     def _reward_base_height(self):
         # Penalize base height away from target
         base_height = self._get_base_heights()
+        base_x_axis = torch.stack([
+            1 - 2*self.base_quat[:, 1]**2 - 2*self.base_quat[:, 2]**2, 
+            2*self.base_quat[:, 0]*self.base_quat[:, 1] + 2*self.base_quat[:, 3]*self.base_quat[:, 2], 
+            2*self.base_quat[:, 0]*self.base_quat[:, 2] - 2*self.base_quat[:, 3]*self.base_quat[:, 1]
+        ], dim=1).to(self.device)
+        dot_product = torch.clip(torch.sum(base_x_axis * torch.tensor([0, 0, 1], device=self.device), dim=-1), -1, 1)
+        angle_error = torch.acos(dot_product)
+        
+        extra_height = torch.where(angle_error > 0.45*torch.pi, torch.zeros_like(angle_error), 0.3 * torch.cos(angle_error))
+        base_height = base_height - extra_height
         return torch.square(base_height - self.cfg.rewards.base_height_target)
     
     def _reward_torques(self):
@@ -1401,7 +1452,7 @@ class Wl4V2LeggedRobot(BaseTask):
 
     def _reward_feet_all_contact(self):
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
-        return torch.sum(contact, dim=1)
+        return 0.25 * torch.sum(contact, dim=1)
 
     def _reward_stumble(self):
         # Penalize feet hitting vertical surfaces
@@ -1411,13 +1462,17 @@ class Wl4V2LeggedRobot(BaseTask):
     def _reward_stand_still(self):
         # Penalize motion at zero commands
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
-        reward_front = torch.sum(torch.square(self.dof_pos[:,0:8] - self.default_dof_pos[:,0:8]), dim=1)
-        reward_rear = torch.sum(torch.square(self.dof_pos[:,8:16] - self.default_dof_pos[:,8:16]), dim=1) 
-        # reward_front = torch.where(torch.all(contact[:,0:2], dim=1), reward_front, torch.zeros_like(reward_front))
-        # reward_rear = torch.where(torch.all(contact[:,2:4], dim=1), reward_rear, torch.zeros_like(reward_rear))
-        return reward_front + reward_rear
-        # return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
-
+        reward = torch.exp(-torch.sum(torch.square(self.dof_pos - self.default_dof_pos), dim=1)/5)
+        return reward * torch.all(contact, dim=1)
+    
+    def _reward_heading(self):
+        if self.cfg.commands.heading_command:
+            _, _, heading = get_euler_xyz(self.base_quat)
+            heading = torch.where(heading > torch.pi, heading - 2 * torch.pi, heading) # limit heading to [-pi, pi]
+            reward = torch.square(heading - self.commands[:, 3])
+            return reward
+        else:
+            return 0
     def _reward_feet_contact_forces(self):
         # penalize high contact forces
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
@@ -1430,76 +1485,67 @@ class Wl4V2LeggedRobot(BaseTask):
     def _reward_action_smoothness(self):
         return torch.sum(torch.square(self.action_history_buf[:,-1,:] - 2*self.action_history_buf[:,-2,:]+self.action_history_buf[:,-3,:]), dim=1)
     
-    def _reward_climb_height(self):
-        cur_footvel_translated = self.feet_vel# - self.root_states[:, 7:10].unsqueeze(1)
-        footvel_in_body_frame = torch.zeros(self.num_envs, len(self.feet_indices), 3, device=self.device)
-        for i in range(len(self.feet_indices)):
-            footvel_in_body_frame[:, i, :] = quat_rotate_inverse(self.base_quat, cur_footvel_translated[:, i, :])
-        bool_front = torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 0:2, 0] < 0.1, dim=1))
-        bool_rear =  torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 2:4, 0] < 0.1, dim=1))
-        # feet air
+    def _reward_climb_feet_air(self):
         feet_contact_z = self.contact_forces[:, self.feet_indices, 2] > 1.
-        # print("bool_front", bool_front)
-        # print("bool_rear", bool_rear)
         reward_front_air = -0.5*torch.sum(1.0*feet_contact_z[:, 0:2], dim=1)
         reward_rear_air = -0.5*torch.sum(1.0*feet_contact_z[:, 2:4], dim=1)
-        # pitch 
-        roll, pitch, _ = get_euler_xyz(self.base_quat)
-        roll = torch.where(roll > torch.pi, roll - 2 * torch.pi, roll) # limit pitch to [-pi, pi]
-        pitch = torch.where(pitch > torch.pi, pitch - 2 * torch.pi, pitch) # limit pitch to [-pi, pi]
-        command = torch.tensor(-0.35*torch.pi, device=self.device)     
-        reward_front_pitch = -1.5*torch.square(pitch - command)#torch.exp(-torch.square(pitch - command)/0.2) 
-        reward_rear_pitch = -1.5*torch.square(pitch)#torch.exp(-torch.square(pitch)/0.2) 
-
-        reward_front = torch.where(bool_front, reward_front_air + reward_front_pitch, torch.zeros_like(reward_front_air))
-        reward_rear = torch.where(bool_rear, reward_rear_air + reward_rear_pitch, torch.zeros_like(reward_rear_air))
+        reward_front = torch.where(self.front_climb, reward_front_air, torch.zeros_like(reward_front_air))
+        reward_rear = torch.where(self.rear_climb, reward_rear_air, torch.zeros_like(reward_rear_air))
+        return reward_front + reward_rear
+    
+    def _reward_climb_pitch(self):
+        rot_mat = quat_to_rot_matrix(self.base_quat)
+        base_x_world_z_angle = torch.acos(torch.clip(rot_mat[:, 2, 0], -1, 1))
+        base_z_world_z_angle = torch.acos(torch.clip(rot_mat[:, 2, 2], -1, 1))
+        reward_front_pitch = -torch.square(base_x_world_z_angle) # torch.exp(-torch.square(pitch - command)/0.2) 
+        reward_rear_pitch = -torch.square(base_z_world_z_angle)
+        reward_front = torch.where(self.front_climb, reward_front_pitch, torch.zeros_like(reward_front_pitch))
+        reward_rear = torch.where(self.rear_climb, reward_rear_pitch, torch.zeros_like(reward_rear_pitch))
         return reward_front + reward_rear
 
-    def _reward_climb_lift_feet(self):
-        cur_footvel_translated = self.feet_vel# - self.root_states[:, 7:10].unsqueeze(1)
-        footvel_in_body_frame = torch.zeros(self.num_envs, len(self.feet_indices), 3, device=self.device)
-        for i in range(len(self.feet_indices)):
-            footvel_in_body_frame[:, i, :] = quat_rotate_inverse(self.base_quat, cur_footvel_translated[:, i, :])
-        bool_front = torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 0:2, 0] < 0.1, dim=1))
-        bool_rear =  torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 2:4, 0] < 0.1, dim=1))
+    def _reward_climb_feet_lift(self):
         # feet lift
         hip_pos = self.rigid_body_states[:, [1, 5, 9, 13], 0:3]
         cur_footpos_translated = self.feet_pos - hip_pos
         footpos_in_hip_frame = torch.zeros(self.num_envs, len(self.feet_indices), 3, device=self.device)
         for i in range(len(self.feet_indices)):
             footpos_in_hip_frame[:, i, :] = quat_rotate_inverse(self.base_quat, cur_footpos_translated[:, i, :])
-    
-        clearance_height_target = 0.2
+        clearance_height_target = 0.1
         height_err = torch.norm(footpos_in_hip_frame, dim = 2) - clearance_height_target
 
-        reward_front_height = torch.exp(-torch.mean(torch.square(height_err[:, 0:2]), dim = 1)/0.025)
-        reward_rear_height = torch.exp(-torch.mean(torch.square(height_err[:, 2:4]), dim = 1)/0.025)
+        reward_front_height = torch.exp(-torch.mean(torch.square(height_err[:, 0:2]), dim = 1)/0.1)
+        reward_rear_height = torch.exp(-torch.mean(torch.square(height_err[:, 2:4]), dim = 1)/0.1)
 
-        reward_front = torch.where(bool_front, reward_front_height, torch.zeros_like(reward_front_height))
-        reward_rear = torch.where(bool_rear, reward_rear_height, torch.zeros_like(reward_rear_height))
+        reward_front = self.front_climb * reward_front_height
+        reward_rear = self.rear_climb * reward_rear_height
         return reward_front + reward_rear
     
     def _reward_foot_mirror(self):
         # penalty when feet contact not mirror, RL foot mirror RR foot, FL foot mirror FR foot
         mirror = torch.tensor([-1, 1, 1], device=self.device)
-        diff_front = torch.sum(torch.square(self.dof_pos[:,[0,1,2]] - self.dof_pos[:,[4,5,6]] * mirror),dim=-1)
-        diff_rear = torch.sum(torch.square(self.dof_pos[:,[8,9,10]] - self.dof_pos[:,[12,13,14]] * mirror),dim=-1)
-        # 不是爬高台
-        # contact = self.contact_forces[:, self.feet_indices, 2] > 1.
-        # reward_front = torch.where(torch.all(contact[:,0:2], dim=1), diff_front, torch.zeros_like(diff_front))
-        # reward_rear = torch.where(torch.all(contact[:,2:4], dim=1), diff_rear, torch.zeros_like(diff_rear))
-        # 爬高台
-        reward_front = diff_front
-        reward_rear = diff_rear
-        return reward_front + reward_rear
+        reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:,[0,1,2]] - self.dof_pos[:,[4,5,6]] * mirror),dim=-1)/0.05) +\
+            torch.exp(-torch.sum(torch.square(self.dof_pos[:,[8,9,10]] - self.dof_pos[:,[12,13,14]] * mirror),dim=-1)/0.05)
+        return reward 
 
     def _reward_hip_pos(self):
         # penalty hip joint position not equal to zero
-        #return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)
-        flag = 1.#*(torch.abs(self.commands[:,1]) == 0)
-        return flag * torch.sum(torch.square(self.dof_pos[:, [0, 4, 8, 12]] - torch.zeros_like(self.dof_pos[:, [0, 4, 8, 12]])), dim=1)
-        #return flag * 1.*(torch.abs(torch.sum(self.dof_pos[:, [0, 3, 6, 9]],dim=-1)) > 0.0)
-        
+        reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:, [0, 4, 8, 12]] - torch.zeros_like(self.dof_pos[:, [0, 4, 8, 12]])), dim=1)/0.05) 
+        return reward # torch.sum(torch.square(self.dof_pos[:, [0, 4, 8, 12]] - torch.zeros_like(self.dof_pos[:, [0, 4, 8, 12]])), dim=1)
+    
+    def _reward_com_feet_contact(self):
+        com = self.root_states[:, 0:2]
+        feetpos_contact = torch.zeros(self.num_envs, 2, device=self.device)
+        feetpos_all = torch.zeros(self.num_envs, 2, device=self.device)
+        contact_num = torch.zeros(self.num_envs, device=self.device)
+        for i in range(len(self.feet_indices)):
+            feetpos_all += self.feet_pos[:, i, 0:2] 
+            feetpos_contact += self.feet_pos[:, i, 0:2] * self.contact_filt[:, i].unsqueeze(1) 
+            contact_num += self.contact_filt[:, i]
+        feetcom = torch.where(contact_num.unsqueeze(1) > 0, feetpos_contact/contact_num.unsqueeze(1), feetpos_all/len(self.feet_indices))
+        error = torch.sum(torch.square(com - feetcom), dim=1)
+
+        return torch.exp(-error/0.25)        
+    
     def _reward_feet_relative_x(self):
         hip_pos = self.rigid_body_states[:, [1, 5, 9, 13], 0:3]
         cur_footpos_translated = self.feet_pos - hip_pos

@@ -156,26 +156,31 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
             ang_vel_xy = -0.05
             orientation = -0.2 # -0
             torques = -1e-5 # -0.00001
-            dof_pos_limits = -10.0
+            dof_pos_limits = -50.0
             dof_vel = -0.0
             dof_acc = -2.5e-7
             base_height = -1.0 # 0
             feet_air_time = 0.0 # 1
             collision = -1.0
+            # base_collision = -50.0
             feet_stumble = 0.0
             action_rate = -0.002
-            stand_still = -0.01
-
+            stand_still = 0.10
+            feet_all_contact = 0.1
             powers = -2e-5
             action_smoothness= -0.001
 
-            foot_mirror = -0.05
-            hip_pos = -0.3
+            foot_mirror = 0.15
+            hip_pos = 0.25
             foot_swing_clearance = -0.0
-            climb_height = 0.5
-            # climb_lift_feet = 0.5
+            climb_pitch = 1.0
+            climb_feet_air = 0.5
+            # climb_feet_lift= 0.5
+
+            heading = -0.05
+            # com_feet_contact = 0.4
             # foot_clearance = -0.01
-            # feet_relative_x = -1.0
+            # feet_relative_x = 0.1
             # contact_body_pitch = 1.2
             # front_feet_air = 1.0
             # feet_upper_height = 2.0
@@ -296,7 +301,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         measure_heights = True
         include_act_obs_pair_buf = False
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
-        terrain_proportions = [0.1, 0.1, 0.0, 0.0, 0.2, 0.0, 0.0]
+        terrain_proportions = [0.15, 0.15, 0.0, 0.0, 0.2, 0.0, 0.0]
         # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 class Wl4V2ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
