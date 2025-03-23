@@ -4,6 +4,6 @@ __pycache__
 .vscode
 *.pt
 *.mp4
-logs/*
+log*
 *.onnx
-.idea/*
+.idea
