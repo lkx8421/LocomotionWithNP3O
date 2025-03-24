@@ -30,7 +30,7 @@
 
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
-class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
+class ClimbRobotCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         num_envs = 4096
 
@@ -303,7 +303,7 @@ class Wl4V2ConstraintHimRoughCfg( LeggedRobotCfg ):
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
         terrain_proportions = [0.15, 0.15, 0.0, 0.0, 0.2, 0.0, 0.0]
         # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-class Wl4V2ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
+class ClimbRobotCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
         learning_rate = 1.e-3
@@ -335,12 +335,12 @@ class Wl4V2ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
       
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = 'test_barlowtwins_feetcontact'
-        experiment_name = 'rough_wl4v2_constraint'
+        experiment_name = 'climb_robot'
         policy_class_name = 'ActorCriticBarlowTwins'
         # policy_class_name = 'ActorCriticTransBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'
         algorithm_class_name = 'NP3O'
-        max_iterations = 3000
+        max_iterations = 5000
         num_steps_per_env = 24
         resume = False
         resume_path = ''

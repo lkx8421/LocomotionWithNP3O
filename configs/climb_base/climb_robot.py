@@ -40,7 +40,7 @@ def quat_to_rot_matrix(quat):
         2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (x2 + y2)
     ], dim=-1).reshape(-1, 3, 3)
 
-class Wl4V2LeggedRobot(BaseTask):
+class ClimbRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         """ Parses the provided config file,
             calls create_sim() (which creates, simulation, terrain and environments),
@@ -773,7 +773,7 @@ class Wl4V2LeggedRobot(BaseTask):
         # torques[:,[3, 7, 11, 15]] = 0.5*self.kd_factor[:,[3, 7, 11, 15]]*(joint_pos_target[:,[3, 7, 11, 15]] - self.dof_vel[:,[3, 7, 11, 15]])
 
         # torques = torques * self.motor_strength
-        print(torques[0, :])
+        # print(torques[0, :])
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
     def check_termination(self):
@@ -783,7 +783,9 @@ class Wl4V2LeggedRobot(BaseTask):
                                    dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
-
+        # rot_mat = quat_to_rot_matrix(self.base_quat)
+        # angle = torch.acos(torch.clip(rot_mat[:, 2, 2], -1., 1.))
+        # self.reset_buf |= torch.any(angle > torch.pi * 3/4)
     def compute_reward(self):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
@@ -1407,7 +1409,11 @@ class Wl4V2LeggedRobot(BaseTask):
     def _reward_collision(self):
         # Penalize collisions on selected bodies
         return torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
-
+    
+    def _reward_base_collision(self):
+        # Penalize collisions on selected bodies
+        return torch.norm(self.contact_forces[:, 0, 0:2], dim=-1) > 0.1
+    
     def _reward_termination(self):
         # Terminal reward / penalty
         return self.reset_buf * ~self.time_out_buf
@@ -1497,8 +1503,8 @@ class Wl4V2LeggedRobot(BaseTask):
         rot_mat = quat_to_rot_matrix(self.base_quat)
         base_x_world_z_angle = torch.acos(torch.clip(rot_mat[:, 2, 0], -1, 1))
         base_z_world_z_angle = torch.acos(torch.clip(rot_mat[:, 2, 2], -1, 1))
-        reward_front_pitch = -torch.square(base_x_world_z_angle) # torch.exp(-torch.square(pitch - command)/0.2) 
-        reward_rear_pitch = -torch.square(base_z_world_z_angle)
+        reward_front_pitch = -torch.square(base_x_world_z_angle) # 0.25 * torch.exp(-torch.square(base_x_world_z_angle)/0.5) 
+        reward_rear_pitch = -torch.square(base_z_world_z_angle) # 0.25 * torch.exp(-torch.square(base_z_world_z_angle)/0.5) 
         reward_front = torch.where(self.front_climb, reward_front_pitch, torch.zeros_like(reward_front_pitch))
         reward_rear = torch.where(self.rear_climb, reward_rear_pitch, torch.zeros_like(reward_rear_pitch))
         return reward_front + reward_rear
@@ -1553,8 +1559,11 @@ class Wl4V2LeggedRobot(BaseTask):
         for i in range(len(self.feet_indices)):
             footpos_in_hip_frame[:, i, :] = quat_rotate_inverse(self.base_quat, cur_footpos_translated[:, i, :])
         target_foot_relative_x = torch.tensor([0.2, 0.2, 0.0, -0.0], device=self.device)
-        rew_foot_relative_x = torch.sum(torch.square(footpos_in_hip_frame[:, :, 0] - target_foot_relative_x), dim=1)
-        return torch.where(self.bool_stand, torch.zeros_like(rew_foot_relative_x), rew_foot_relative_x)
+        rew_foot_relative_x = torch.exp(-torch.sum(torch.square(footpos_in_hip_frame[:, :, 0] - target_foot_relative_x), dim=1)/0.025)
+        feet_contact_z = self.contact_forces[:, self.feet_indices, 2] > 1.
+
+        return torch.where(torch.all(feet_contact_z, dim=1), rew_foot_relative_x, torch.zeros_like(rew_foot_relative_x))
+        # return rew_foot_relative_x
         # return torch.where(self.episode_length_buf > self.threshold_episode_length, torch.zeros_like(rew_foot_relative_x), rew_foot_relative_x)
 
         # return torch.where(self.episode_length_buf > self.threshold_episode_length, result, 0.5*(front_penalty + rear_penalty))
