@@ -28,12 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-# from legged_gym.envs import *
-from configs.go2.go2_constraint_him import Go2ConstraintHimRoughCfg, Go2ConstraintHimRoughCfgPPO
-import cv2
-import os
 
-from isaacgym import gymapi
 from modules import *
 from utils import  get_args, export_policy_as_jit, task_registry, Logger
 from configs import *

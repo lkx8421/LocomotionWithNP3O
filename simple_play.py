@@ -55,7 +55,7 @@ def play(args):
     policy_cfg_dict = class_to_dict(train_cfg.policy)
     runner_cfg_dict = class_to_dict(train_cfg.runner)
     actor_critic_class = eval(runner_cfg_dict["policy_class_name"])
-    policy: ActorCriticRMA = actor_critic_class(env.cfg.env.n_proprio,
+    policy: ActorCriticBarlowTwins = actor_critic_class(env.cfg.env.n_proprio,
                                                       env.cfg.env.n_scan,
                                                       env.num_obs,
                                                       env.cfg.env.n_priv_latent,

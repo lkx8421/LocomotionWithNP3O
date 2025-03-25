@@ -4,12 +4,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from modules.actor_critic import ActorCriticRMA
+from modules.actor_critic import ActorCriticBarlowTwins
 from runner.rollout_storage import RolloutStorageWithCost
 from utils import unpad_trajectories
 
 class NP3O:
-    actor_critic: ActorCriticRMA
+    actor_critic: ActorCriticBarlowTwins
     def __init__(self,
                  actor_critic,
                  depth_encoder,

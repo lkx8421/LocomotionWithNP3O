@@ -1,11 +1,10 @@
-from configs.climb_base.climb_robot_config import ClimbRobotCfg, ClimbRobotCfgPPO
-
-class Wl4V2ClimbRobotCfg( ClimbRobotCfg ):
+from configs.base.climb.climb_robot_config import ClimbRobotCfg, ClimbRobotCfgPPO
+class Wl4V3ClimbRobotCfg( ClimbRobotCfg ):
     
     class asset( ClimbRobotCfg.asset ):
-        file = '{ROOT_DIR}/resources/wl4v2/urdf/robot.urdf'
+        file = '{ROOT_DIR}/resources/wl4v3/urdf/robot.urdf'
         foot_name = "foot"
-        name = "wl4v2"
+        name = "wl4v3"
         penalize_contacts_on = ["thigh", "calf", "base"]
         terminate_after_contacts_on = []
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
@@ -60,10 +59,10 @@ class Wl4V2ClimbRobotCfg( ClimbRobotCfg ):
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
         terrain_proportions = [0.15, 0.15, 0.0, 0.0, 0.2, 0.0, 0.0]
         # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-class Wl4V2ClimbRobotCfgPPO( ClimbRobotCfgPPO ):
+class Wl4V3ClimbRobotCfgPPO( ClimbRobotCfgPPO ):
     class runner( ClimbRobotCfgPPO.runner ):
         run_name = ''
-        experiment_name = 'wl4v2_climb'
+        experiment_name = 'wl4v3_climb'
         max_iterations = 5000
 
  

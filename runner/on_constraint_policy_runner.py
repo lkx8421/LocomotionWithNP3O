@@ -8,7 +8,8 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 from global_config import ROOT_DIR
 
-from modules import ActorCriticRMA,ActorCriticRmaTrans,ActorCriticSF,ActorCriticBarlowTwins,ActorCriticStateTransformer,ActorCriticTransBarlowTwins,ActorCriticMixedBarlowTwins,ActorCriticRnnBarlowTwins,ActorCriticVqvae
+# from modules import ActorCriticRMA,ActorCriticRmaTrans,ActorCriticSF,ActorCriticBarlowTwins,ActorCriticStateTransformer,ActorCriticTransBarlowTwins,ActorCriticMixedBarlowTwins,ActorCriticRnnBarlowTwins,ActorCriticVqvae
+from modules import ActorCriticBarlowTwins 
 from algorithm import NP3O
 from envs.vec_env import VecEnv
 from modules.depth_backbone import DepthOnlyFCBackbone58x87, RecurrentDepthBackbone
@@ -34,13 +35,14 @@ class OnConstraintPolicyRunner:
         # self.phase1_end = self.cfg["phase1_end"] 
  
         actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
-        actor_critic: ActorCriticRMA = actor_critic_class(self.env.cfg.env.n_proprio,
+        actor_critic: ActorCriticBarlowTwins = actor_critic_class(self.env.cfg.env.n_proprio,
                                                       self.env.cfg.env.n_scan,
                                                       self.env.num_obs,
                                                       self.env.cfg.env.n_priv_latent,
                                                       self.env.cfg.env.history_len,
                                                       self.env.num_actions,
                                                       **self.policy_cfg)
+        print("Policy architecture: ",actor_critic)
         if self.cfg['resume']:
             log_root = os.path.join(ROOT_DIR, 'logs', self.cfg['experiment_name'], self.cfg['resume_path'])
             resume_path = get_load_path(log_root, load_run=self.cfg['load_run'], checkpoint=self.cfg['checkpoint'])
@@ -81,7 +83,7 @@ class OnConstraintPolicyRunner:
             [self.env.num_obs], 
             [self.env.num_privileged_obs], 
             [self.env.num_actions],
-            [self.env.cfg.cost.num_costs],
+            [self.env.cfg.costs.num_costs],
             self.env.cost_d_values_tensor
         )
         # Log

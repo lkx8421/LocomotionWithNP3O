@@ -30,52 +30,36 @@
 
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
-class ClimbRobotCfg( LeggedRobotCfg ):
+class Wl4V2RobotCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         num_envs = 4096
-
         n_scan = 187
-        n_priv_latent =  4 + 1 + 16 + 16 + 16 + 6 + 1 + 4 + 1 - 3 + 3 - 3 + 4 - 7
+        n_priv_latent =  4 + 1 + 4 + 1 + 1 + 16 + 16 + 16
         n_proprio = 60
         history_len = 10
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
         num_actions = 16
     class init_state( LeggedRobotCfg.init_state ):
         pos = [0.0, 0.0, 0.60] # x,y,z [m]
-        """
-          unitree go2 sdk order:
-               -0.1 <-3 FR_hip_joint 0 -> 0.0
-               0.8 <- 4 FR_thigh_joint 1 -> 0.9
-               -1.5 <- 5 FR_calf_joint 2 -> -1.8
-               0.1 <- 0 FL_hip_joint 3 -> 0.0
-               0.8 <- 1 FL_thigh_joint 4 -> 0.9
-               -1.5 <- 2 FL_calf_joint 5 -> -1.8
-               -0.1 <- 9 RR_hip_joint 6 -> 0.0
-               1 <- 10 RR_thigh_joint 7 -> 0.9
-               -1.5 <- 11 RR_calf_joint 8 -> -1.8
-               0.1 <- 6 RL_hip_joint 9 -> 0.0
-               1 <- 7 RL_thigh_joint 10 -> 0.9
-               -1.5 <- 8 RL_calf_joint 11 -> -1.8
-        """
         default_joint_angles = { # = target angles [rad] when action = 0.0
-            'FL_hip_joint': 0.0,   # [rad]
-            'RL_hip_joint': 0.0,   # [rad]
-            'FR_hip_joint': -0.0 ,  # [rad]
-            'RR_hip_joint': -0.0,   # [rad]
+            'FL_hip_joint': 0.1,   # [rad]
+            'RL_hip_joint': 0.1,   # [rad]
+            'FR_hip_joint': -0.1 ,  # [rad]
+            'RR_hip_joint': -0.1,   # [rad]
 
-            'FL_thigh_joint': 0.0,     # [rad]
-            'FR_thigh_joint': 0.0,     # [rad]
+            'FL_thigh_joint': 0.6,     # [rad]
             'RL_thigh_joint': 0.6,   # [rad]
+            'FR_thigh_joint': 0.6,     # [rad]
             'RR_thigh_joint': 0.6,   # [rad]
 
-            'FL_calf_joint': -0.9,   # [rad]
-            'FR_calf_joint': -0.9,  # [rad]
+            'FL_calf_joint': -1.2,   # [rad]
             'RL_calf_joint': -1.2,    # [rad]
+            'FR_calf_joint': -1.2,  # [rad]
             'RR_calf_joint': -1.2,    # [rad]
 
             'FL_foot_joint':0.0,
-            'FR_foot_joint':0.0,
             'RL_foot_joint':0.0,
+            'FR_foot_joint':0.0,
             'RR_foot_joint':0.0,
         }
 
@@ -101,14 +85,13 @@ class ClimbRobotCfg( LeggedRobotCfg ):
             'RR_foot_joint':0.0,
         }
 
-
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
         stiffness = {'hip': 30.,
                      'thigh': 30.,
                      'calf': 30.,
-                     'foot': 2.}  # [N*m/rad]
+                     'foot': 10.}  # [N*m/rad]
         damping = {'hip': 1.0,
                    'thigh': 1.0,
                    'calf': 1.0,
@@ -118,7 +101,6 @@ class ClimbRobotCfg( LeggedRobotCfg ):
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
         hip_scale_reduction = 0.5
-
         use_filter = True
 
     class commands( LeggedRobotCfg.control ):
@@ -136,76 +118,43 @@ class ClimbRobotCfg( LeggedRobotCfg ):
             heading = [-3.14, 3.14]
 
     class asset( LeggedRobotCfg.asset ):
-        file = '{ROOT_DIR}/resources/wl4ver2/urdf/robot.urdf'
+        file = '{ROOT_DIR}/resources/wl4v2/urdf/robot.urdf'
         foot_name = "foot"
         name = "wl4v2"
-        penalize_contacts_on = ["thigh", "calf", "base"]
-        terminate_after_contacts_on = []
-        self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
+        penalize_contacts_on = ["thigh", "calf"]
+        terminate_after_contacts_on = ["base"]
+        self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = False
   
     class rewards( LeggedRobotCfg.rewards ):
-        clearance_height_target = -0.3
         class scales( LeggedRobotCfg.rewards.scales ):
-
+            torques = 0.0
+            powers = -2e-5
             termination = 0.0
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             lin_vel_z = -2.0
+            orientation = -0.01
             ang_vel_xy = -0.05
-            orientation = -0.2 # -0
-            torques = -1e-5 # -0.00001
-            dof_pos_limits = -50.0
-            dof_vel = -0.0
+            dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -1.0 # 0
-            feet_air_time = 0.0 # 1
+            base_height = -2.0
+            feet_air_time = 0.
             collision = -1.0
-            # base_collision = -50.0
             feet_stumble = 0.0
-            action_rate = -0.002
-            stand_still = 0.10
-            feet_all_contact = 0.1
-            powers = -2e-5
-            action_smoothness= -0.001
+            action_rate = -0.01
+            action_smoothness= 0
+            stand_still = 0.0
+            hip_pos = 0.0
 
-            foot_mirror = 0.15
-            hip_pos = 0.25
-            foot_swing_clearance = -0.0
-            climb_pitch = 1.0
-            climb_feet_air = 0.5
-            # climb_feet_lift= 0.5
-
-            heading = -0.05
-            # com_feet_contact = 0.4
-            # foot_clearance = -0.01
-            # feet_relative_x = 0.1
-            # contact_body_pitch = 1.2
-            # front_feet_air = 1.0
-            # feet_upper_height = 2.0
-            # stand_joint_pos = 0.8
-            # stand_height = 0.5
-            
-            # feet_lin_pos_z = 1.2
-            # position_tracking = 1.5
-            # feet_lin_vel_z = 10.0
-            # feet_height = 2.0 # 有点上坡
-            # climbing_50cm = 1.5
-            # front_feet_air = -1.0
-            # foot_clearance= -0.0
-            # front_rear_feet_air = 0.1
-            # # two wheel stand
-            # front_feet_air = 1
-            # head_pitch = 2
-
-        only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
         soft_dof_pos_limit = 0.9  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
-        base_height_target = 0.51
-        max_contact_force = 250.  # forces above this value are penalized
+        base_height_target = 0.40
+        max_contact_force = 500.  # forces above this value are penalized
 
     class domain_rand( LeggedRobotCfg.domain_rand):
         randomize_friction = True
@@ -223,7 +172,7 @@ class ClimbRobotCfg( LeggedRobotCfg ):
         randomize_motor = True
         motor_strength_range = [0.8, 1.2]
 
-        randomize_kpkd = False
+        randomize_kpkd = True
         kp_range = [0.8,1.2]
         kd_range = [0.8,1.2]
 
@@ -237,73 +186,24 @@ class ClimbRobotCfg( LeggedRobotCfg ):
         # randomize_initial_joint_pos = True
         # initial_joint_pos_range = [0.5, 1.5]
     
-    class depth( LeggedRobotCfg.depth):
-        use_camera = False
-        camera_num_envs = 192
-        camera_terrain_num_rows = 10
-        camera_terrain_num_cols = 20
-
-        position = [0.27, 0, 0.03]  # front camera
-        angle = [-5, 5]  # positive pitch down
-
-        update_interval = 1  # 5 works without retraining, 8 worse
-
-        original = (106, 60)
-        resized = (87, 58)
-        horizontal_fov = 87
-        buffer_len = 2
-        
-        near_clip = 0
-        far_clip = 2
-        dis_noise = 0.0
-        
-        scale = 1
-        invert = True
-    
     class costs:
+        num_costs = 3
         class scales:
             pos_limit = 0.1
             torque_limit = 0.1
             dof_vel_limits = 0.1
-            #foot_slide = 1
-            #foot_nocontact_regular = 1
-            # feet_air_time = 1
-            # foot_mirror = -0.1
-            # trot_contact=0.1
-            # stand_still=0.1
-            # #idol_contact = 0.1
-            # #idol_contact = 0.1
-            #base_height = 0.1
-            # foot_swing_clearance = 1
-            #acc_smoothness = 0.1
 
         class d_values:
             pos_limit = 0.0
             torque_limit = 0.0
             dof_vel_limits = 0.0
-            #foot_slide = 0.0
-            #foot_nocontact_regular = 0.0
-            #feet_air_time = 0.0
-            #foot_mirror = 2.0
-            # trot_contact= 5.0
-            # stand_still = 0.0
-            # #idol_contact = 0.0
-            # #idol_contact = 0.0
-            #base_height = 0.0
-            # foot_swing_clearance = 0.0
-            #acc_smoothness = 2.0
 
-    class cost:
-        num_costs = 3
-    
     class terrain(LeggedRobotCfg.terrain):
         mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
-        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
-        terrain_proportions = [0.15, 0.15, 0.0, 0.0, 0.2, 0.0, 0.0]
-        # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-class ClimbRobotCfgPPO( LeggedRobotCfgPPO ):
+
+class Wl4V2RobotCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
         learning_rate = 1.e-3
@@ -334,8 +234,8 @@ class ClimbRobotCfgPPO( LeggedRobotCfgPPO ):
         imi_flag = True
       
     class runner( LeggedRobotCfgPPO.runner ):
-        run_name = 'test_barlowtwins_feetcontact'
-        experiment_name = 'climb_robot'
+        run_name = ''
+        experiment_name = 'wl4v2_rough'
         policy_class_name = 'ActorCriticBarlowTwins'
         # policy_class_name = 'ActorCriticTransBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'

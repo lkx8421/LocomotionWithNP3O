@@ -3,15 +3,14 @@ from .base_config  import BaseConfig
 class LeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
-
-        n_scan = 132
+        n_scan = 187
         n_priv_latent = 4 + 1 + 12 + 12 + 6 
+        num_actions = 12
         n_proprio = 46
         history_len = 10
 
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 12
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
@@ -21,9 +20,17 @@ class LeggedRobotCfg(BaseConfig):
         include_foot_contacts = True
         contact_buf_len = 100
 
-    class cost:
-        num_costs = 1
-    
+    class costs:
+        num_costs = 3
+        class scales:
+            pos_limit = 0.1
+            torque_limit = 0.1
+            dof_vel_limits = 0.1
+
+        class d_values:
+            pos_limit = 0.0
+            torque_limit = 0.0
+            dof_vel_limits = 0.0
     class depth:
         use_camera = False
         camera_num_envs = 192
@@ -127,7 +134,7 @@ class LeggedRobotCfg(BaseConfig):
         default_dof_drive_mode = 3  # see GymDofDriveModeFlags (0 is none, 1 is pos tgt, 2 is vel tgt, 3 effort)
         self_collisions = 0  # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = True  # replace collision cylinders with capsules, leads to faster/more stable simulation
-        flip_visual_attachments = True  # Some .obj meshes must be flipped from y-up to z-up
+        flip_visual_attachments = False  # Some .obj meshes must be flipped from y-up to z-up
 
         density = 0.001
         angular_damping = 0.
@@ -162,27 +169,32 @@ class LeggedRobotCfg(BaseConfig):
         # action_buf_len = 5
 
     class rewards:
-        class scales:
-            powers = -2e-5
+        class scales: # baseline from amp table III
+            termination = -0.5
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
+            orientation = -0.01
+            torques = -1e-5
+            dof_pos_limits = -10.0
+            dof_vel = -0.
             dof_acc = -2.5e-7
-            base_height = -1.0
+            torque_limits = -0.0002
+            base_height = -0.
+            feet_air_time =  1.0
+            collision = -1.0
             action_rate = -0.01
-            action_smoothness=-0.01
-            # foot_clearance= -0.01
-            orientation=-0.2
-
+            stand_still = -0.
+            feet_contact_forces = -1.0
 
         only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
         soft_dof_pos_limit = 1.  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
-        base_height_target = 1.
-        max_contact_force = 100.  # forces above this value are penalized
+        base_height_target = 0.4
+        max_contact_force = 250.  # forces above this value are penalized
 
     class normalization:
         class obs_scales:
@@ -279,11 +291,11 @@ class LeggedRobotCfgPPO(BaseConfig):
         num_steps_per_env = LeggedRobotCfg.depth.update_interval * 24
 
     class runner:
-        policy_class_name = 'ActorCriticRMA'
-        runner_class_name = 'OnPolicyRunner'
-        algorithm_class_name = 'PPO'
+        policy_class_name = 'ActorCriticBarlowTwins'
+        runner_class_name = 'OnConstraintPolicyRunner'
+        algorithm_class_name = 'NP3O'
         num_steps_per_env = 24 # per iteration
-        max_iterations = 500 # number of policy updates
+        max_iterations = 5000 # number of policy updates
 
         # logging
         save_interval = 100 # check for potential saves every this many iterations

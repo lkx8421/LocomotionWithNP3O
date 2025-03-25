@@ -21,7 +21,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="-3.12E-05"
         izz="0.107" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -34,7 +34,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0" />
       <geometry>
@@ -134,7 +134,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="-1.42E-06"
         izz="0.000596" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -147,7 +147,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0.08 0" />
       <geometry>
@@ -189,7 +189,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="0.000808"
         izz="0.00103" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -202,7 +202,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 -0.1065" />
       <geometry>
@@ -244,7 +244,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="8.28E-06"
         izz="3.29E-05" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -257,7 +257,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 -0.21 0" xyz="0.008 0 -0.06" />
       <geometry>
@@ -382,7 +382,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="0"
         izz="0.0007" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -394,7 +394,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0.0 0" />
       <geometry>
@@ -439,7 +439,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="1.42E-06"
         izz="0.000596" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="3.1415 0 0" />
@@ -452,7 +452,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 -0.08 0" />
       <geometry>
@@ -494,7 +494,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="-0.000808"
         izz="0.00103" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -507,7 +507,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 -0.1065" />
       <geometry>
@@ -549,7 +549,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="-8.28E-06"
         izz="3.29E-05" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -562,7 +562,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 -0.2 0" xyz="0.01 0 -0.06" />
       <geometry>
@@ -687,7 +687,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="0"
         izz="0.0007" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -700,7 +700,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 -0.0 0" />
       <geometry>
@@ -744,7 +744,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="-1.42E-06"
         izz="0.000596" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 3.1415 0" />
@@ -757,7 +757,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0.08 0" />
       <geometry>
@@ -799,7 +799,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="0.000808"
         izz="0.00103" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -812,7 +812,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 -0.1065" />
       <geometry>
@@ -854,7 +854,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="8.28E-06"
         izz="3.29E-05" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -867,7 +867,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 -0.2 0" xyz="0.01 0 -0.06" />
       <geometry>
@@ -993,7 +993,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="0"
         izz="0.0007" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -1006,7 +1006,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0.0 0" />
       <geometry>
@@ -1050,7 +1050,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="1.42E-06"
         izz="0.000596" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="3.1415 3.1415 0" />
@@ -1063,7 +1063,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 -0.08 0" />
       <geometry>
@@ -1105,7 +1105,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="-0.000808"
         izz="0.00103" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -1118,7 +1118,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 1.5707963267948966 0" xyz="0 0 -0.1065" />
       <geometry>
@@ -1160,7 +1160,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="-8.28E-06"
         izz="3.29E-05" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -1173,7 +1173,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="0 -0.2 0" xyz="0.01 0 -0.06" />
       <geometry>
@@ -1298,7 +1298,7 @@ Stephen Brawner (brawner@gmail.com)
         iyz="0"
         izz="0.0007" />
     </inertial>
-    <!-- <visual>
+    <visual>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -1311,7 +1311,7 @@ Stephen Brawner (brawner@gmail.com)
         <color
           rgba="1 1 1 1" />
       </material>
-    </visual> -->
+    </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 -0.0 0" />
       <geometry>

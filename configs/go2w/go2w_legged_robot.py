@@ -163,15 +163,10 @@ class Go2WLeggedRobot(BaseTask):
 
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
-        self.default_start_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
 
         for i in range(self.num_dofs):
             name = self.dof_names[i]
-            angle = self.cfg.init_state.default_joint_angles[name]
-            start_angle = self.cfg.init_state.start_joint_angles[name]
-
-            self.default_dof_pos[i] = angle
-            self.default_start_pos[i] = start_angle
+            self.default_dof_pos[i] = self.cfg.init_state.default_joint_angles[name]
 
             found = False
             for dof_name in self.cfg.control.stiffness.keys():
@@ -186,7 +181,6 @@ class Go2WLeggedRobot(BaseTask):
                     print(f"PD gain of joint {name} were not defined, setting them to zero")
 
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
-        self.default_start_pos = self.default_start_pos.unsqueeze(0)
 
         if self.cfg.depth.use_camera:
             self.depth_buffer = torch.zeros(self.num_envs,  
@@ -252,7 +246,7 @@ class Go2WLeggedRobot(BaseTask):
         self.num_dofs = len(self.dof_names)
         feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
 
-        for s in ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]:
+        for s in feet_names:
             feet_idx = self.gym.find_asset_rigid_body_index(robot_asset, s)
             sensor_pose = gymapi.Transform(gymapi.Vec3(0.0, 0.0, 0.0))
             self.gym.create_asset_force_sensor(robot_asset, feet_idx, sensor_pose)
@@ -1721,7 +1715,7 @@ class Go2WLeggedRobot(BaseTask):
     
     def _cost_stand_still(self):
         # Penalize motion at zero commands
-        return torch.sum(torch.abs(self.dof_pos - self.default_start_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
+        return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
     
     def _cost_hip_pos(self):
         #return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)

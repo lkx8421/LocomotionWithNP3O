@@ -30,7 +30,7 @@
 
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
-class Go2ConstraintHimRoughCfg( LeggedRobotCfg ):
+class Go2RobotCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         num_envs = 4096
 
@@ -222,6 +222,7 @@ class Go2ConstraintHimRoughCfg( LeggedRobotCfg ):
         invert = True
     
     class costs:
+        num_costs = 3
         class scales:
             pos_limit = 0.1
             torque_limit = 0.1
@@ -253,16 +254,13 @@ class Go2ConstraintHimRoughCfg( LeggedRobotCfg ):
             #base_height = 0.0
             # foot_swing_clearance = 0.0
             #acc_smoothness = 2.0
-
-    class cost:
-        num_costs = 3
     
     class terrain(LeggedRobotCfg.terrain):
         mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
 
-class Go2ConstraintHimRoughCfgPPO( LeggedRobotCfgPPO ):
+class Go2RobotCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
         learning_rate = 1e-3
