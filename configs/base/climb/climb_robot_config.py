@@ -108,7 +108,7 @@ class ClimbRobotCfg( LeggedRobotCfg ):
         stiffness = {'hip': 30.,
                      'thigh': 30.,
                      'calf': 30.,
-                     'foot': 2.}  # [N*m/rad]
+                     'foot': 10.}  # [N*m/rad]
         damping = {'hip': 1.0,
                    'thigh': 1.0,
                    'calf': 1.0,
@@ -167,6 +167,8 @@ class ClimbRobotCfg( LeggedRobotCfg ):
             action_rate = -0.002
             stand_still = 0.10
             feet_all_contact = 0.1
+            feet_contact_forces = 0.0
+            torque_limits = 0
             powers = -2e-5
             action_smoothness= -0.001
 
