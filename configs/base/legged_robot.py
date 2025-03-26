@@ -133,7 +133,6 @@ class LeggedRobot(BaseTask):
 
         self.measured_heights = 0
         self.feet_heights = 0
-        self.feet_local_heights = torch.zeros(self.num_envs,12,dtype=torch.float, device=self.device, requires_grad=False)
 
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
@@ -355,18 +354,18 @@ class LeggedRobot(BaseTask):
         if self.cfg.noise.add_noise:
             obs_buf += (2 * torch.rand_like(obs_buf) - 1) * noise_vec.to(self.device)
 
-        priv_latent = torch.cat((
-            #self.base_lin_vel * self.obs_scales.lin_vel,
-            self.contact_filt.float()-0.5,
-            self.randomized_lag_tensor,
+        priv_latent = torch.cat(( # 私有潜在状态
+            # self.base_lin_vel * self.obs_scales.lin_vel,
+            self.contact_filt.float()-0.5,   # 足端接触状态（4足）           *4
+            self.randomized_lag_tensor,                         # 动作延迟参数（模拟响应延迟）    *1
             #self.base_ang_vel  * self.obs_scales.ang_vel,
             # self.base_lin_vel * self.obs_scales.lin_vel,
-            self.mass_params_tensor,
-            self.friction_coeffs_tensor,
-            self.restitution_coeffs_tensor,
-            self.motor_strength, 
-            self.kp_factor,
-            self.kd_factor), dim=-1)
+            self.mass_params_tensor,                            # 随机化的质量参数（躯干质量分布） *4
+            self.friction_coeffs_tensor,                        # 随机化的地面摩擦系数           *1    
+            self.restitution_coeffs_tensor,                     # 随机化的碰撞恢复系数           *1
+            self.motor_strength,                                # 电机强度比例因子               *16   
+            self.kp_factor,                                     # 位置环比例系数因子             *16
+            self.kd_factor), dim=-1)                            # 微分环系数因子                *16
         
         # add perceptive inputs if not blind
         if self.cfg.terrain.measure_heights:
@@ -651,7 +650,7 @@ class LeggedRobot(BaseTask):
             actions = self._low_pass_action_filter(actions)
 
         #pd controller
-        actions_scaled = actions[:, :12] * self.cfg.control.action_scale
+        actions_scaled = actions * self.cfg.control.action_scale
         actions_scaled[:, self.hip_joint_indices] *= self.cfg.control.hip_scale_reduction
 
         # if self.cfg.domain_rand.randomize_lag_timesteps:
@@ -775,8 +774,6 @@ class LeggedRobot(BaseTask):
         # for i in range(len(self.lag_buffer)):
         #     self.lag_buffer[i][env_ids, :] = 0
         self.lag_buffer[env_ids,:,:] = 0
-        self.phase[env_ids,:] = 0
-        self.phase_time[env_ids,:] = 0
     
     def reset(self):
         """ Reset all robots"""
