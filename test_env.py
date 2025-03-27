@@ -29,9 +29,9 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 
+from configs import *
 from modules import *
 from utils import  get_args, export_policy_as_jit, task_registry, Logger
-from configs import *
 from utils.helpers import class_to_dict
 from utils.task_registry import task_registry
 import numpy as np
@@ -39,7 +39,6 @@ import torch
 from global_config import ROOT_DIR
 
 from PIL import Image as im
-
 
 def test_env(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)

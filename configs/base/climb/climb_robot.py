@@ -2,6 +2,7 @@ from isaacgym.torch_utils import *
 import torch
 # env related
 from configs.base.legged_robot import LeggedRobot
+from isaacgym import gymtorch
 
 def quat_to_rot_matrix(quat):
     """
@@ -28,9 +29,130 @@ class ClimbRobot( LeggedRobot ):
         super()._init_buffers()
         self.hip_joint_indices = [0, 4, 8, 12]
         self.foot_joint_indices = [3, 7, 11, 15]
+        self.front_climb = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device, requires_grad=False)
+        self.rear_climb = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device, requires_grad=False)
+
+    def reindex(self,tensor):
+        #sim2real purpose
+        return tensor[:,[4,5,6,7,0,1,2,3,12,13,14,15,8,9,10,11]]
+    
+    def reindex_feet(self,tensor):
+        return tensor[:,[1,0,3,2]]
+    
+    def step(self, actions):
+        """ Apply actions, simulate, call self.post_physics_step()
+
+        Args:
+            actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
+        """
+
+        self.action_history_buf = torch.cat([self.action_history_buf[:, 1:].clone(), actions[:, None, :].clone()], dim=1)
+
+        actions = self.reindex(actions)
+        actions = actions.to(self.device)
+
+        # self.action_history_buf = torch.cat([self.action_history_buf[:, 1:].clone(), actions[:, None, :].clone()], dim=1)
+
+        self.global_counter += 1   
+        clip_actions = self.cfg.normalization.clip_actions
+        self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
+        # step physics and render each frame
+        self.render()
+
+        for _ in range(self.cfg.control.decimation):
+            self.torques = self._compute_torques(self.actions).view(self.torques.shape)
+            self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
+            self.gym.simulate(self.sim)
+            self.gym.fetch_results(self.sim, True)
+            self.gym.refresh_dof_state_tensor(self.sim)
+        self.post_physics_step()
+
+        clip_obs = self.cfg.normalization.clip_observations
+        self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
+        if self.privileged_obs_buf is not None:
+            self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
+
+        if self.cfg.depth.use_camera and self.global_counter % self.cfg.depth.update_interval == 0:
+            self.extras["depth"] = self.depth_buffer[:, -2]  # have already selected last one
+        else:
+            self.extras["depth"] = None
+ 
+        return self.obs_buf,self.privileged_obs_buf,self.rew_buf,self.cost_buf,self.reset_buf, self.extras
+    
     def compute_observations(self):
         self.dof_pos[:, self.foot_joint_indices] = 0
-        super().compute_observations()
+        obs_buf =torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
+                            self.base_ang_vel  * self.obs_scales.ang_vel,
+                            self.projected_gravity,
+                            self.commands[:, :3] * self.commands_scale,
+                            self.reindex((self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos),
+                            self.reindex(self.dof_vel * self.obs_scales.dof_vel),
+                            #self.reindex_feet(self.contact_filt.float()-0.5),
+                            # self.reindex(self.action_history_buf[:,-1])),dim=-1)
+                            self.action_history_buf[:,-1]),dim=-1)
+
+        noise_scales = self.cfg.noise.noise_scales
+        noise_level = self.cfg.noise.noise_level
+        noise_vec = torch.cat((torch.zeros(3),
+                               torch.ones(3) * noise_scales.ang_vel * noise_level,
+                               torch.ones(3) * noise_scales.gravity * noise_level,
+                               torch.zeros(3),
+                               torch.ones(
+                                   16) * noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos,
+                               torch.ones(
+                                   16) * noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel,
+                               #torch.ones(4) * noise_scales.contact_states * noise_level,
+                               #torch.zeros(4),
+                               torch.zeros(self.num_actions),
+                               ), dim=0)
+        
+        if self.cfg.noise.add_noise:
+            obs_buf += (2 * torch.rand_like(obs_buf) - 1) * noise_vec.to(self.device)
+
+        priv_latent = torch.cat(( # 私有潜在状态
+            # self.base_lin_vel * self.obs_scales.lin_vel,
+            self.reindex_feet(self.contact_filt.float()-0.5),   # 足端接触状态（4足）           *4
+            self.randomized_lag_tensor,                         # 动作延迟参数（模拟响应延迟）    *1
+            #self.base_ang_vel  * self.obs_scales.ang_vel,
+            # self.base_lin_vel * self.obs_scales.lin_vel,
+            self.mass_params_tensor,                            # 随机化的质量参数（躯干质量分布） *4
+            self.friction_coeffs_tensor,                        # 随机化的地面摩擦系数           *1    
+            self.restitution_coeffs_tensor,                     # 随机化的碰撞恢复系数           *1
+            self.motor_strength,                                # 电机强度比例因子               *16   
+            self.kp_factor,                                     # 位置环比例系数因子             *16
+            self.kd_factor), dim=-1)                            # 微分环系数因子                *16
+        
+        # add perceptive inputs if not blind
+        if self.cfg.terrain.measure_heights:
+            #priv_latent = torch.cat([priv_latent,self.feet_local_heights],dim=-1)
+            heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.4 - self.measured_heights, -1, 1.)*self.obs_scales.height_measurements
+            self.obs_buf = torch.cat([obs_buf, heights, priv_latent, self.obs_history_buf.view(self.num_envs, -1)], dim=-1)
+        else:
+            self.obs_buf = torch.cat([obs_buf, priv_latent, self.obs_history_buf.view(self.num_envs, -1)], dim=-1)
+
+        # update buffer
+        self.obs_history_buf = torch.where(
+            (self.episode_length_buf <= 1)[:, None, None], 
+            torch.stack([obs_buf] * self.cfg.env.history_len, dim=1),
+            torch.cat([
+                self.obs_history_buf[:, 1:],
+                obs_buf.unsqueeze(1)
+            ], dim=1)
+        )
+        self.contact_buf = torch.where(
+            (self.episode_length_buf <= 1)[:, None, None], 
+            torch.stack([self.contact_filt.float()] * self.cfg.env.contact_buf_len, dim=1),
+            torch.cat([
+                self.contact_buf[:, 1:],
+                self.contact_filt.float().unsqueeze(1)
+            ], dim=1)
+        )
+
+        if self.cfg.terrain.include_act_obs_pair_buf:
+            # add to full observation history and action history to obs
+            pure_obs_hist = self.obs_history_buf[:,:,:-self.num_actions].reshape(self.num_envs,-1)
+            act_hist = self.action_history_buf.view(self.num_envs,-1)
+            self.obs_buf = torch.cat([self.obs_buf,pure_obs_hist,act_hist], dim=-1)
 
     def _post_physics_step_callback(self):
         super()._post_physics_step_callback()
