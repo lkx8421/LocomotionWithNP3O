@@ -20,7 +20,7 @@ import cv2
 from configs import LeggedRobotCfg
 from global_config import ROOT_DIR
 
-class Go2WLeggedRobot(BaseTask):
+class Go2WRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         """ Parses the provided config file,
             calls create_sim() (which creates, simulation, terrain and environments),

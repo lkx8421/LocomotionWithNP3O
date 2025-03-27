@@ -1,15 +1,16 @@
-from configs.base.climb.climb_robot_config import ClimbRobotCfg, ClimbRobotCfgPPO
-class Wl4V3ClimbRobotCfg( ClimbRobotCfg ):
+from configs.base.climb_robot_config import ClimbRobotCfg, ClimbRobotCfgPPO
+
+class Go2WRobotClimbCfg( ClimbRobotCfg ):
     
     class asset( ClimbRobotCfg.asset ):
-        file = '{ROOT_DIR}/resources/wl4v3/urdf/robot.urdf'
+        file = '{ROOT_DIR}/resources/go2w/urdf/robot.urdf'
         foot_name = "foot"
-        name = "wl4v3"
+        name = "go2w"
         penalize_contacts_on = ["thigh", "calf", "base"]
         terminate_after_contacts_on = []
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
-        flip_visual_attachments = False
+        flip_visual_attachments = True
   
     class rewards( ClimbRobotCfg.rewards ):
         clearance_height_target = -0.3
@@ -21,7 +22,6 @@ class Wl4V3ClimbRobotCfg( ClimbRobotCfg ):
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation = -0.2 # -0
-            torques = -1e-5 # -0.00001
             dof_pos_limits = -50.0
             dof_vel = -0.0
             dof_acc = -2.5e-7
@@ -59,10 +59,10 @@ class Wl4V3ClimbRobotCfg( ClimbRobotCfg ):
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
         terrain_proportions = [0.15, 0.15, 0.0, 0.0, 0.2, 0.0, 0.0]
         # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-class Wl4V3ClimbRobotCfgPPO( ClimbRobotCfgPPO ):
+class Go2WRobotClimbCfgPPO( ClimbRobotCfgPPO ):
     class runner( ClimbRobotCfgPPO.runner ):
         run_name = ''
-        experiment_name = 'wl4v3_climb'
+        experiment_name = 'go2w_climb'
         max_iterations = 5000
 
  

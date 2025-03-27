@@ -1,7 +1,6 @@
-from configs.base.climb.climb_robot_config import ClimbRobotCfg, ClimbRobotCfgPPO
+from configs.base.climb_robot_config import ClimbRobotCfg, ClimbRobotCfgPPO
 
-class Wl4V2ClimbRobotCfg( ClimbRobotCfg ):
-    
+class Wl4V2RobotClimbCfg( ClimbRobotCfg ):
     class asset( ClimbRobotCfg.asset ):
         file = '{ROOT_DIR}/resources/wl4v2/urdf/robot.urdf'
         foot_name = "foot"
@@ -9,13 +8,10 @@ class Wl4V2ClimbRobotCfg( ClimbRobotCfg ):
         penalize_contacts_on = ["thigh", "calf", "base"]
         terminate_after_contacts_on = []
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
-        replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
-        flip_visual_attachments = False
   
     class rewards( ClimbRobotCfg.rewards ):
         clearance_height_target = -0.3
         class scales( ClimbRobotCfg.rewards.scales ):
-
             termination = 0.0
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
@@ -53,14 +49,7 @@ class Wl4V2ClimbRobotCfg( ClimbRobotCfg ):
         soft_torque_limit = 1.
         base_height_target = 0.51
         max_contact_force = 250.  # forces above this value are penalized
-    class terrain(ClimbRobotCfg.terrain):
-        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
-        measure_heights = True
-        include_act_obs_pair_buf = False
-        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
-        terrain_proportions = [0.15, 0.15, 0.0, 0.0, 0.2, 0.0, 0.0]
-        # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-class Wl4V2ClimbRobotCfgPPO( ClimbRobotCfgPPO ):
+class Wl4V2RobotClimbCfgPPO( ClimbRobotCfgPPO ):
     class runner( ClimbRobotCfgPPO.runner ):
         run_name = ''
         experiment_name = 'wl4v2_climb'

@@ -2,7 +2,6 @@ from isaacgym.torch_utils import *
 import torch
 # config
 from configs.base.legged_robot import LeggedRobot
-from configs.wl4v2.wl4v2_robot_config import Wl4V2RobotCfg
 class Wl4V2Robot(LeggedRobot):
     #------------ enviorment core ----------------
     def _init_buffers(self):
@@ -23,11 +22,9 @@ class Wl4V2Robot(LeggedRobot):
 
         self.trot_pattern1 = torch.tensor([1.,0,0,1.],dtype=torch.float, device=self.device,requires_grad=False).view(1,-1)
         self.trot_pattern2 = torch.tensor([0.,1.,1.,0.],dtype=torch.float, device=self.device,requires_grad=False).view(1,-1)
-    
-    def compute_observations(self):
+    def _post_physics_step_callback(self):
         self.dof_pos[:,self.foot_joint_indices]  = 0 
-        super().compute_observations()
-        
+        super()._post_physics_step_callback()
     
     def _compute_torques(self, actions):
         """ Compute torques from actions.
@@ -44,15 +41,8 @@ class Wl4V2Robot(LeggedRobot):
             actions = self._low_pass_action_filter(actions)
 
         #pd controller
-        actions_scaled = actions[:, :16] * self.cfg.control.action_scale
+        actions_scaled = actions * self.cfg.control.action_scale
         actions_scaled[:, self.hip_joint_indices] *= self.cfg.control.hip_scale_reduction
-        # actions_scaled[:, [3, 7, 11, 15]] *= 20.0
-
-        # if self.cfg.domain_rand.randomize_lag_timesteps:
-        #     self.lag_buffer = self.lag_buffer[1:] + [actions_scaled.clone()]
-        #     joint_pos_target = self.lag_buffer[0] + self.default_dof_pos
-        # else:
-        #     joint_pos_target = actions_scaled + self.default_dof_pos
 
         if self.cfg.domain_rand.randomize_lag_timesteps:
             self.lag_buffer = torch.cat([self.lag_buffer[:,1:,:].clone(),actions_scaled.unsqueeze(1).clone()],dim=1)
@@ -60,24 +50,18 @@ class Wl4V2Robot(LeggedRobot):
         else:
             joint_pos_target = actions_scaled + self.default_dof_pos
 
-        # joint_pos_target = torch.clamp(joint_pos_target,self.dof_pos-1,self.dof_pos+1)
-
         control_type = self.cfg.control.control_type
-        if control_type=="P":
+        if control_type == "P_AND_V":
             if not self.cfg.domain_rand.randomize_kpkd:  # TODO add strength to gain directly
-                torques = self.p_gains*(joint_pos_target- self.dof_pos) - self.d_gains*self.dof_vel
-                torques[:,self.foot_joint_indices] = self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices] - self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
+                torques = self.p_gains*(joint_pos_target - self.dof_pos) - self.d_gains*self.dof_vel
+                torques[:,self.foot_joint_indices] = self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices] - self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]                
             else:
                 torques = self.kp_factor * self.p_gains*(joint_pos_target - self.dof_pos) - self.kd_factor * self.d_gains*self.dof_vel
-                torques[:,self.foot_joint_indices] = self.kp_factor[:,self.foot_joint_indices]  * self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices]
-                - self.kd_factor[:,self.foot_joint_indices] *self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
-        elif control_type=="V":
-            torques = self.p_gains*(actions_scaled - self.dof_vel) - self.d_gains*(self.dof_vel - self.last_dof_vel)/self.sim_params.dt
-        elif control_type=="T":
-            torques = actions_scaled
-        else:
+                torques[:,self.foot_joint_indices] = self.kp_factor[:,self.foot_joint_indices]  * self.p_gains[:,self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices]
+                - self.kd_factor[:,self.foot_joint_indices] *self.d_gains[:,self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
+        else: 
             raise NameError(f"Unknown controller type: {control_type}")
-        torques = torques * self.motor_strength
+        torques *= self.motor_strength
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
     #------------ reward functions----------------
@@ -257,8 +241,10 @@ class Wl4V2Robot(LeggedRobot):
     
     def _reward_hip_pos(self):
         #return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)
-        flag = 1.*(torch.abs(self.commands[:,1]) == 0)
-        return flag * torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - torch.zeros_like(self.dof_pos[:, [0, 3, 6, 9]])), dim=1)
+        reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)/0.05) 
+        return reward
+        # flag = 1.#*(torch.abs(self.commands[:,1]) == 0)
+        # return flag * torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)
         #return flag * 1.*(torch.abs(torch.sum(self.dof_pos[:, [0, 3, 6, 9]],dim=-1)) > 0.0)
 
     def _reward_foot_mirror(self):

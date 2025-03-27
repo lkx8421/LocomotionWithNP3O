@@ -39,124 +39,10 @@ class ClimbRobot( LeggedRobot ):
     def reindex_feet(self,tensor):
         return tensor[:,[1,0,3,2]]
     
-    def step(self, actions):
-        """ Apply actions, simulate, call self.post_physics_step()
-
-        Args:
-            actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
-        """
-
-        self.action_history_buf = torch.cat([self.action_history_buf[:, 1:].clone(), actions[:, None, :].clone()], dim=1)
-
-        actions = self.reindex(actions)
-        actions = actions.to(self.device)
-
-        # self.action_history_buf = torch.cat([self.action_history_buf[:, 1:].clone(), actions[:, None, :].clone()], dim=1)
-
-        self.global_counter += 1   
-        clip_actions = self.cfg.normalization.clip_actions
-        self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
-        # step physics and render each frame
-        self.render()
-
-        for _ in range(self.cfg.control.decimation):
-            self.torques = self._compute_torques(self.actions).view(self.torques.shape)
-            self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
-            self.gym.simulate(self.sim)
-            self.gym.fetch_results(self.sim, True)
-            self.gym.refresh_dof_state_tensor(self.sim)
-        self.post_physics_step()
-
-        clip_obs = self.cfg.normalization.clip_observations
-        self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
-        if self.privileged_obs_buf is not None:
-            self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
-
-        if self.cfg.depth.use_camera and self.global_counter % self.cfg.depth.update_interval == 0:
-            self.extras["depth"] = self.depth_buffer[:, -2]  # have already selected last one
-        else:
-            self.extras["depth"] = None
- 
-        return self.obs_buf,self.privileged_obs_buf,self.rew_buf,self.cost_buf,self.reset_buf, self.extras
-    
-    def compute_observations(self):
-        self.dof_pos[:, self.foot_joint_indices] = 0
-        obs_buf =torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
-                            self.base_ang_vel  * self.obs_scales.ang_vel,
-                            self.projected_gravity,
-                            self.commands[:, :3] * self.commands_scale,
-                            self.reindex((self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos),
-                            self.reindex(self.dof_vel * self.obs_scales.dof_vel),
-                            #self.reindex_feet(self.contact_filt.float()-0.5),
-                            # self.reindex(self.action_history_buf[:,-1])),dim=-1)
-                            self.action_history_buf[:,-1]),dim=-1)
-
-        noise_scales = self.cfg.noise.noise_scales
-        noise_level = self.cfg.noise.noise_level
-        noise_vec = torch.cat((torch.zeros(3),
-                               torch.ones(3) * noise_scales.ang_vel * noise_level,
-                               torch.ones(3) * noise_scales.gravity * noise_level,
-                               torch.zeros(3),
-                               torch.ones(
-                                   16) * noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos,
-                               torch.ones(
-                                   16) * noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel,
-                               #torch.ones(4) * noise_scales.contact_states * noise_level,
-                               #torch.zeros(4),
-                               torch.zeros(self.num_actions),
-                               ), dim=0)
-        
-        if self.cfg.noise.add_noise:
-            obs_buf += (2 * torch.rand_like(obs_buf) - 1) * noise_vec.to(self.device)
-
-        priv_latent = torch.cat(( # 私有潜在状态
-            # self.base_lin_vel * self.obs_scales.lin_vel,
-            self.reindex_feet(self.contact_filt.float()-0.5),   # 足端接触状态（4足）           *4
-            self.randomized_lag_tensor,                         # 动作延迟参数（模拟响应延迟）    *1
-            #self.base_ang_vel  * self.obs_scales.ang_vel,
-            # self.base_lin_vel * self.obs_scales.lin_vel,
-            self.mass_params_tensor,                            # 随机化的质量参数（躯干质量分布） *4
-            self.friction_coeffs_tensor,                        # 随机化的地面摩擦系数           *1    
-            self.restitution_coeffs_tensor,                     # 随机化的碰撞恢复系数           *1
-            self.motor_strength,                                # 电机强度比例因子               *16   
-            self.kp_factor,                                     # 位置环比例系数因子             *16
-            self.kd_factor), dim=-1)                            # 微分环系数因子                *16
-        
-        # add perceptive inputs if not blind
-        if self.cfg.terrain.measure_heights:
-            #priv_latent = torch.cat([priv_latent,self.feet_local_heights],dim=-1)
-            heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.4 - self.measured_heights, -1, 1.)*self.obs_scales.height_measurements
-            self.obs_buf = torch.cat([obs_buf, heights, priv_latent, self.obs_history_buf.view(self.num_envs, -1)], dim=-1)
-        else:
-            self.obs_buf = torch.cat([obs_buf, priv_latent, self.obs_history_buf.view(self.num_envs, -1)], dim=-1)
-
-        # update buffer
-        self.obs_history_buf = torch.where(
-            (self.episode_length_buf <= 1)[:, None, None], 
-            torch.stack([obs_buf] * self.cfg.env.history_len, dim=1),
-            torch.cat([
-                self.obs_history_buf[:, 1:],
-                obs_buf.unsqueeze(1)
-            ], dim=1)
-        )
-        self.contact_buf = torch.where(
-            (self.episode_length_buf <= 1)[:, None, None], 
-            torch.stack([self.contact_filt.float()] * self.cfg.env.contact_buf_len, dim=1),
-            torch.cat([
-                self.contact_buf[:, 1:],
-                self.contact_filt.float().unsqueeze(1)
-            ], dim=1)
-        )
-
-        if self.cfg.terrain.include_act_obs_pair_buf:
-            # add to full observation history and action history to obs
-            pure_obs_hist = self.obs_history_buf[:,:,:-self.num_actions].reshape(self.num_envs,-1)
-            act_hist = self.action_history_buf.view(self.num_envs,-1)
-            self.obs_buf = torch.cat([self.obs_buf,pure_obs_hist,act_hist], dim=-1)
-
     def _post_physics_step_callback(self):
-        super()._post_physics_step_callback()
+        self.dof_pos[:, self.foot_joint_indices] = 0
         self._update_climb_condition()
+        super()._post_physics_step_callback()
 
     def _compute_torques(self, actions):
         """ Compute torques from actions.
@@ -173,15 +59,8 @@ class ClimbRobot( LeggedRobot ):
             actions = self._low_pass_action_filter(actions)
 
         #pd controller
-        actions_scaled = actions[:, :16] * self.cfg.control.action_scale
-        actions_scaled[:, [0, 4, 8, 12]] *= self.cfg.control.hip_scale_reduction
-        # actions_scaled[:, [3, 7, 11, 15]] *= 20.0
-
-        # if self.cfg.domain_rand.randomize_lag_timesteps:
-        #     self.lag_buffer = self.lag_buffer[1:] + [actions_scaled.clone()]
-        #     joint_pos_target = self.lag_buffer[0] + self.default_dof_pos
-        # else:
-        #     joint_pos_target = actions_scaled + self.default_dof_pos
+        actions_scaled = actions * self.cfg.control.action_scale
+        actions_scaled[:, self.hip_joint_indices] *= self.cfg.control.hip_scale_reduction
 
         if self.cfg.domain_rand.randomize_lag_timesteps:
             self.lag_buffer = torch.cat([self.lag_buffer[:,1:,:].clone(),actions_scaled.unsqueeze(1).clone()],dim=1)
@@ -189,10 +68,8 @@ class ClimbRobot( LeggedRobot ):
         else:
             joint_pos_target = actions_scaled + self.default_dof_pos
 
-        # joint_pos_target = torch.clamp(joint_pos_target,self.dof_pos-1,self.dof_pos+1)
-
         control_type = self.cfg.control.control_type
-        if control_type=="P":
+        if control_type == "P_AND_V":
             if not self.cfg.domain_rand.randomize_kpkd:  # TODO add strength to gain directly
                 torques = self.p_gains*(joint_pos_target - self.dof_pos) - self.d_gains*self.dof_vel
                 torques[:,self.foot_joint_indices] = self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices] - self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]                
@@ -200,11 +77,7 @@ class ClimbRobot( LeggedRobot ):
                 torques = self.kp_factor * self.p_gains*(joint_pos_target - self.dof_pos) - self.kd_factor * self.d_gains*self.dof_vel
                 torques[:,self.foot_joint_indices] = self.kp_factor[:,self.foot_joint_indices]  * self.p_gains[:,self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices]
                 - self.kd_factor[:,self.foot_joint_indices] *self.d_gains[:,self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
-        elif control_type=="V":
-            torques = self.p_gains*(actions_scaled - self.dof_vel) - self.d_gains*(self.dof_vel - self.last_dof_vel)/self.sim_params.dt
-        elif control_type=="T":
-            torques = actions_scaled
-        else:
+        else: 
             raise NameError(f"Unknown controller type: {control_type}")
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
@@ -229,18 +102,6 @@ class ClimbRobot( LeggedRobot ):
         # feet air
     
     #------------ reward functions----------------
-    def _reward_lin_vel_z(self):
-        # Penalize z axis base linear velocity
-        return torch.square(self.base_lin_vel[:, 2])
-    
-    def _reward_ang_vel_xy(self):
-        # Penalize xy axes base angular velocity
-        return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
-    
-    def _reward_orientation(self):
-        # Penalize non flat base orientation
-        return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
-
     def _reward_base_height(self):
         # Penalize base height away from target
         base_height = self._get_base_heights()
@@ -255,73 +116,11 @@ class ClimbRobot( LeggedRobot ):
         extra_height = torch.where(angle_error > 0.45*torch.pi, torch.zeros_like(angle_error), 0.3 * torch.cos(angle_error))
         base_height = base_height - extra_height
         return torch.square(base_height - self.cfg.rewards.base_height_target)
-    
-    def _reward_torques(self):
-        # Penalize torques
-        return torch.sum(torch.square(self.torques), dim=1)
 
-    def _reward_dof_vel(self):
-        # Penalize dof velocities
-        return torch.sum(torch.square(self.dof_vel), dim=1)
-    
-    def _reward_dof_acc(self):
-        # Penalize dof accelerations
-        return torch.sum(torch.square((self.last_dof_vel - self.dof_vel) / self.dt), dim=1)
-    
-    def _reward_action_rate(self):
-        # Penalize changes in actions
-        return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
-    
-    def _reward_collision(self):
-        # Penalize collisions on selected bodies
-        return torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
-    
     def _reward_base_collision(self):
         # Penalize collisions on selected bodies
         return torch.norm(self.contact_forces[:, 0, 0:2], dim=-1) > 0.1
     
-    def _reward_termination(self):
-        # Terminal reward / penalty
-        return self.reset_buf * ~self.time_out_buf
-
-    def _reward_dof_pos_limits(self):
-        # Penalize dof positions too close to the limit
-        out_of_limits = -(self.dof_pos - self.dof_pos_limits[:, 0]).clip(max=0.) # lower limit
-        out_of_limits += (self.dof_pos - self.dof_pos_limits[:, 1]).clip(min=0.)
-        return torch.sum(out_of_limits, dim=1)
-
-    def _reward_dof_vel_limits(self):
-        # Penalize dof velocities too close to the limit
-        # clip to max error = 1 rad/s per joint to avoid huge penalties
-        return torch.sum((torch.abs(self.dof_vel) - self.dof_vel_limits*self.cfg.rewards.soft_dof_vel_limit).clip(min=0., max=1.), dim=1)
-
-    def _reward_torque_limits(self):
-        # penalize torques too close to the limit
-        return torch.sum((torch.abs(self.torques) - self.torque_limits*self.cfg.rewards.soft_torque_limit).clip(min=0.), dim=1)
-
-    def _reward_tracking_lin_vel(self):
-        # Tracking of linear velocity commands (xy axes)
-        lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
-        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
-
-    def _reward_tracking_ang_vel(self):
-        # Tracking of angular velocity commands (yaw)
-        ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
-        return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)
-
-    def _reward_feet_air_time(self):
-        # Reward long steps
-        # Need to filter the contacts because the contact reporting of PhysX is unreliable on meshes
-        contact = self.contact_forces[:, self.feet_indices, 2] > 1.
-        contact_filt = torch.logical_or(contact, self.last_contacts) 
-        self.last_contacts = contact
-        first_contact = (self.feet_air_time > 0.) * contact_filt
-        self.feet_air_time += self.dt
-        rew_airTime = torch.sum((self.feet_air_time - 0.5) * first_contact, dim=1) # reward only on first contact with the ground
-        rew_airTime *= torch.norm(self.commands[:, 1:3], dim=1) > 0.1 #no reward for zero command
-        self.feet_air_time *= ~contact_filt
-        return rew_airTime
-
     def _reward_feet_all_contact(self):
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
         return 0.25 * torch.sum(contact, dim=1)
@@ -345,18 +144,10 @@ class ClimbRobot( LeggedRobot ):
             return reward
         else:
             return 0
-    def _reward_feet_contact_forces(self):
-        # penalize high contact forces
-        return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
 
     ########### add new below #############
-    def _reward_powers(self):
-        # Penalize torques
-        return torch.sum(torch.abs(self.torques * self.dof_vel), dim=1)
 
-    def _reward_action_smoothness(self):
-        return torch.sum(torch.square(self.action_history_buf[:,-1,:] - 2*self.action_history_buf[:,-2,:]+self.action_history_buf[:,-3,:]), dim=1)
-    
+
     def _reward_climb_feet_air(self):
         feet_contact_z = self.contact_forces[:, self.feet_indices, 2] > 1.
         reward_front_air = -0.5*torch.sum(1.0*feet_contact_z[:, 0:2], dim=1)

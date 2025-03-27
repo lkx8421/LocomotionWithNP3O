@@ -162,7 +162,14 @@ class LeggedRobot(BaseTask):
                                             self.cfg.depth.resized[0]).to(self.device)
             
         self.lag_buffer = torch.zeros(self.num_envs,self.cfg.domain_rand.lag_timesteps,self.num_actions,device=self.device,requires_grad=False)
-
+    
+    def reindex(self,tensor):
+        #sim2real purpose
+        return tensor[:,[3,4,5,0,1,2,9,10,11,6,7,8]]
+    
+    def reindex_feet(self,tensor):
+        return tensor[:,[1,0,3,2]]
+    
     def _create_envs(self):
         """ Creates environments:
              1. loads the robot URDF/MJCF asset,
@@ -297,7 +304,7 @@ class LeggedRobot(BaseTask):
         #self.action_history_buf = torch.cat([self.action_history_buf[:, 1:].clone(), actions[:, None, :].clone()], dim=1)
         #self.cfg.control.action_scale
         self.action_history_buf = torch.cat([self.action_history_buf[:, 1:].clone(), actions[:, None, :].clone()], dim=1)
-
+        actions = self.reindex(actions)
         actions = actions.to(self.device)
 
         # self.action_history_buf = torch.cat([self.action_history_buf[:, 1:].clone(), actions[:, None, :].clone()], dim=1)
@@ -334,8 +341,8 @@ class LeggedRobot(BaseTask):
                             self.base_ang_vel  * self.obs_scales.ang_vel,
                             self.projected_gravity,
                             self.commands[:, :3] * self.commands_scale,
-                            (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                            self.dof_vel * self.obs_scales.dof_vel,
+                            self.reindex((self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos),
+                            self.reindex(self.dof_vel * self.obs_scales.dof_vel),
                             self.action_history_buf[:,-1]),dim=-1)
 
         noise_scales = self.cfg.noise.noise_scales
@@ -356,7 +363,7 @@ class LeggedRobot(BaseTask):
 
         priv_latent = torch.cat(( # 私有潜在状态
             # self.base_lin_vel * self.obs_scales.lin_vel,
-            self.contact_filt.float()-0.5,   # 足端接触状态（4足）           *4
+            self.reindex_feet(self.contact_filt.float()-0.5),   # 足端接触状态（4足）           *4
             self.randomized_lag_tensor,                         # 动作延迟参数（模拟响应延迟）    *1
             #self.base_ang_vel  * self.obs_scales.ang_vel,
             # self.base_lin_vel * self.obs_scales.lin_vel,
