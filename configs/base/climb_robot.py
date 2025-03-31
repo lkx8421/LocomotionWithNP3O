@@ -38,7 +38,7 @@ class ClimbRobot( LeggedRobot ):
     
     def reindex_feet(self,tensor):
         return tensor[:,[1,0,3,2]]
-    
+
     def _post_physics_step_callback(self):
         self.dof_pos[:, self.foot_joint_indices] = 0
         self._update_climb_condition()
@@ -75,8 +75,8 @@ class ClimbRobot( LeggedRobot ):
                 torques[:,self.foot_joint_indices] = self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices] - self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]                
             else:
                 torques = self.kp_factor * self.p_gains*(joint_pos_target - self.dof_pos) - self.kd_factor * self.d_gains*self.dof_vel
-                torques[:,self.foot_joint_indices] = self.kp_factor[:,self.foot_joint_indices]  * self.p_gains[:,self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices]
-                - self.kd_factor[:,self.foot_joint_indices] *self.d_gains[:,self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
+                torques[:,self.foot_joint_indices] = self.kp_factor[:,self.foot_joint_indices]  * self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices]
+                - self.kd_factor[:,self.foot_joint_indices] *self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
         else: 
             raise NameError(f"Unknown controller type: {control_type}")
         return torch.clip(torques, -self.torque_limits, self.torque_limits)

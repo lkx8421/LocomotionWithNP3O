@@ -107,6 +107,12 @@ class TitaRobot(LeggedRobot):
     
 
     #------------ reward functions----------------
+    def _reward_stand_still(self):
+        # Penalize motion at zero commands
+        reward_pos = torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
+        reward_vel = 0.1*torch.sum(torch.abs(self.dof_vel), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
+        return reward_pos# + reward_vel
+    
     def _reward_vertical_contact(self):
         return torch.sum(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2),dim=-1)    
     # def _reward_foot_clearance(self):

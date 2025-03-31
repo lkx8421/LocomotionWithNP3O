@@ -170,7 +170,7 @@ class LeggedRobotCfg(BaseConfig):
 
     class rewards:
         class scales: # baseline from amp table III
-            termination = -0.5
+            termination = -0.0
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             lin_vel_z = -2.0
@@ -184,6 +184,7 @@ class LeggedRobotCfg(BaseConfig):
             base_height = -0.
             feet_air_time =  1.0
             collision = -1.0
+            stumble = -0.0
             action_rate = -0.01
             stand_still = -0.
             feet_contact_forces = -0.0

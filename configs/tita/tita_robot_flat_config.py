@@ -68,7 +68,7 @@ class TitaRobotFlatCfg( LeggedRobotCfg ):
                    'leg_4': 0.5}     #  [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
-        foot_scale_reduction = 8.0
+        # foot_scale_reduction = 8.0
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
         hip_scale_reduction = 0.5
@@ -76,7 +76,7 @@ class TitaRobotFlatCfg( LeggedRobotCfg ):
 
     class commands( LeggedRobotCfg.control ):
         curriculum = False
-        max_curriculum = 1.0
+        max_curriculum = 2.0
         num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
         heading_command = False  # if true: compute ang vel command from heading error
@@ -118,11 +118,11 @@ class TitaRobotFlatCfg( LeggedRobotCfg ):
         max_feet_distance = 0.60
         # tracking_sigma = 0.1
         class scales( LeggedRobotCfg.rewards.scales ):
-            lin_vel_z = 0.0 # off
-            ang_vel_xy = 0.0 # off
+            lin_vel_z = -2.0 # off
+            ang_vel_xy = -0.05 # off
             orientation = -0.2 # 很重要，不加的话会导致存活时间下降
             base_height = -1.0
-            torques = -2.5e-05
+            torques = -1e-05
             dof_vel = 0.0 # off
             dof_acc = -2.5e-07
             action_rate = -0.01
@@ -134,11 +134,11 @@ class TitaRobotFlatCfg( LeggedRobotCfg ):
             tracking_ang_vel = 0.5 # off
             feet_air_time = 0.0 # off
             # no_fly = 1.0
-            # stand_still = -1.0
+            stand_still = -1.0
             # feet_contact_forces = 0.0 # off
             # feet_distance = -100
-            # survival = 0.1
-            # wheel_adjustment = 1.0
+            # survival = 0.0
+            wheel_adjustment = 0.1
             # leg_symmetry = 10.0
 
             hip_pos = 0.25

@@ -122,7 +122,7 @@ class ClimbRobotCfg( LeggedRobotCfg ):
 
     class commands( LeggedRobotCfg.control ):
         curriculum = False
-        max_curriculum = 1.
+        max_curriculum = 1.0
         num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
         heading_command = True  # if true: compute ang vel command from heading error
@@ -135,7 +135,7 @@ class ClimbRobotCfg( LeggedRobotCfg ):
             heading = [-3.14, 3.14]
 
     class asset( LeggedRobotCfg.asset ):
-        file = '{ROOT_DIR}/resources/wl4ver2/urdf/robot.urdf'
+        file = '{ROOT_DIR}/resources/wl4v2/urdf/robot.urdf'
         foot_name = "foot"
         name = "wl4v2"
         penalize_contacts_on = ["thigh", "calf", "base"]
