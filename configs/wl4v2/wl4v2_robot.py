@@ -25,7 +25,12 @@ class Wl4V2Robot(LeggedRobot):
     def _post_physics_step_callback(self):
         self.dof_pos[:,self.foot_joint_indices]  = 0 
         super()._post_physics_step_callback()
+    def reindex(self,tensor):
+        #sim2real purpose
+        return tensor[:,[4,5,6,7,0,1,2,3,12,13,14,15,8,9,10,11]]
     
+    def reindex_feet(self,tensor):
+        return tensor[:,[1,0,3,2]]
     def _compute_torques(self, actions):
         """ Compute torques from actions.
             Actions can be interpreted as position or velocity targets given to a PD controller, or directly as scaled torques.
@@ -57,8 +62,8 @@ class Wl4V2Robot(LeggedRobot):
                 torques[:,self.foot_joint_indices] = self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices] - self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]                
             else:
                 torques = self.kp_factor * self.p_gains*(joint_pos_target - self.dof_pos) - self.kd_factor * self.d_gains*self.dof_vel
-                torques[:,self.foot_joint_indices] = self.kp_factor[:,self.foot_joint_indices]  * self.p_gains[:,self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices]
-                - self.kd_factor[:,self.foot_joint_indices] *self.d_gains[:,self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
+                torques[:,self.foot_joint_indices] = self.kp_factor[:,self.foot_joint_indices]  * self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices]
+                - self.kd_factor[:,self.foot_joint_indices] *self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]
         else: 
             raise NameError(f"Unknown controller type: {control_type}")
         torques *= self.motor_strength

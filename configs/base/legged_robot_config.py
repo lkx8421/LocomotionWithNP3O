@@ -146,27 +146,32 @@ class LeggedRobotCfg(BaseConfig):
 
     class domain_rand:
         randomize_friction = True
-        friction_range = [0.6, 2.]
+        #friction_range = [0.2, 2.75]
+        friction_range = [0.2, 1.25]
+        randomize_restitution = False
+        restitution_range = [0.0,1.0]
         randomize_base_mass = True
-        added_mass_range = [0., 3.]
+        #added_mass_range = [-1., 3.]
+        added_mass_range = [-1, 2.]
         randomize_base_com = True
-        added_com_range = [-0.2, 0.2]
+        added_com_range = [-0.05, 0.05]
         push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1
 
         randomize_motor = True
-        motor_strength_range = [0.8, 1.2]
+        motor_strength_range = [0.9, 1.1]
+
+        randomize_kpkd = True
+        kp_range = [0.9,1.1]
+        kd_range = [0.9,1.1]
 
         randomize_lag_timesteps = True
-        lag_timesteps = 6
+        lag_timesteps = 3
 
-        # delay_update_global_steps = 24 * 8000
-        # action_delay = False
-        # action_curr_step = [1, 1]
-        # action_curr_step_scratch = [0, 1]
-        # action_delay_view = 1
-        # action_buf_len = 5
+        disturbance = True
+        disturbance_range = [-30.0, 30.0]
+        disturbance_interval = 8
 
     class rewards:
         class scales: # baseline from amp table III

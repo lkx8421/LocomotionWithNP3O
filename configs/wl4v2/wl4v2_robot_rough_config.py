@@ -31,6 +31,15 @@
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 class Wl4V2RobotRoughCfg( LeggedRobotCfg ):
+    class env(LeggedRobotCfg.env):
+        num_envs = 4096
+
+        n_scan = 187
+        n_priv_latent =  4 + 1 + 4 + 1 + 1 + 16 + 16 + 16
+        n_proprio = 60 #
+        history_len = 10
+        num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
+        num_actions = 16
     class init_state( LeggedRobotCfg.init_state ):
         pos = [0.0, 0.0, 0.60] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
