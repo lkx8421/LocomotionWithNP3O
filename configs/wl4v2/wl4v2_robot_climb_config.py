@@ -38,7 +38,7 @@ class Wl4V2RobotClimbCfg( LeggedRobotCfg ):
         stiffness = {'hip': 30.,
                      'thigh': 30.,
                      'calf': 30.,
-                     'foot': 10.}  # [N*m/rad]
+                     'foot': 3.}  # [N*m/rad]
         damping = {'hip': 1.0,
                    'thigh': 1.0,
                    'calf': 1.0,
@@ -82,7 +82,7 @@ class Wl4V2RobotClimbCfg( LeggedRobotCfg ):
             tracking_ang_vel = 0.5
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
-            orientation = -0.8 # -0
+            orientation = -0.2 # -0
             torques = -1e-5 # -0.00001
             dof_pos_limits = -50.0
             dof_vel = -0.0

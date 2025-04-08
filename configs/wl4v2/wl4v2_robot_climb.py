@@ -111,18 +111,25 @@ class Wl4V2ClimbRobot( LeggedRobot ):
         # feet air
     
     #------------ reward functions----------------
-    def _reward_orientation(self):
-        # Penalize non flat base orientation
-        return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1) * ~self.front_climb
+    # def _reward_orientation(self):
+    #     # Penalize non flat base orientation
+    #     return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1) #* ~self.front_climb
 
     def _reward_base_height(self):
         # Penalize base height away from target
         base_height = self._get_base_heights()
-        rot_mat = quat_to_rot_matrix(self.base_quat)
-        base_x_world_z_angle = torch.acos(torch.clip(rot_mat[:, 2, 0], 0, 1))
-        target_height = 0.2 * self.front_climb * torch.cos(base_x_world_z_angle) + self.cfg.rewards.base_height_target
-        # extra_height = torch.where(base_x_world_z_angle > 0.45*torch.pi, torch.zeros_like(base_x_world_z_angle), 0.3 * torch.cos(base_x_world_z_angle))
-        return torch.square(base_height - target_height)
+        base_x_axis = torch.stack([
+            1 - 2*self.base_quat[:, 1]**2 - 2*self.base_quat[:, 2]**2, 
+            2*self.base_quat[:, 0]*self.base_quat[:, 1] + 2*self.base_quat[:, 3]*self.base_quat[:, 2], 
+            2*self.base_quat[:, 0]*self.base_quat[:, 2] - 2*self.base_quat[:, 3]*self.base_quat[:, 1]
+        ], dim=1).to(self.device)
+        dot_product = torch.clip(torch.sum(base_x_axis * torch.tensor([0, 0, 1], device=self.device), dim=-1), -1, 1)
+        angle_error = torch.acos(dot_product)
+        
+        extra_height = torch.where(angle_error > 0.45*torch.pi, torch.zeros_like(angle_error), 0.3 * torch.cos(angle_error))
+        base_height = base_height - extra_height
+        return torch.square(base_height - self.cfg.rewards.base_height_target)
+
 
     def _reward_base_collision(self):
         # Penalize collisions on selected bodies
@@ -136,7 +143,7 @@ class Wl4V2ClimbRobot( LeggedRobot ):
         # Penalize motion at zero commands
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
         reward = torch.exp(-torch.sum(torch.square(self.dof_pos - self.default_dof_pos), dim=1)/5)
-        return reward #* ~self.front_climb 
+        return reward * torch.all(contact, dim=1)
     # def _reward_default_joint_pos(self):
     #     contact = self.contact_forces[:, self.feet_indices, 2] > 1.
     #     reward = torch.exp(-torch.sum(torch.square(self.dof_pos - self.default_dof_pos), dim=1)/5)
