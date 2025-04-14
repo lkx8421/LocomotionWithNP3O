@@ -113,15 +113,15 @@ class TitaRobotFlatCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         only_positive_rewards = False
         soft_dof_pos_limit = 0.9 
-        base_height_target = 0.4
+        base_height_target = 0.3
         min_feet_distance = 0.57
         max_feet_distance = 0.60
         # tracking_sigma = 0.1
         class scales( LeggedRobotCfg.rewards.scales ):
             lin_vel_z = -2.0 # off
             ang_vel_xy = -0.05 # off
-            orientation = -0.2 # 很重要，不加的话会导致存活时间下降
-            base_height = -1.0
+            orientation = -5.0 # 很重要，不加的话会导致存活时间下降
+            base_height = -10.0
             torques = -1e-05
             dof_vel = 0.0 # off
             dof_acc = -2.5e-07
@@ -134,15 +134,15 @@ class TitaRobotFlatCfg( LeggedRobotCfg ):
             tracking_ang_vel = 0.5 # off
             feet_air_time = 0.0 # off
             # no_fly = 1.0
-            stand_still = -1.0
+            # stand_still = -1.0
             # feet_contact_forces = 0.0 # off
-            # feet_distance = -100
+            # feet_distance = -1.0
             # survival = 0.0
-            wheel_adjustment = 0.1
+            wheel_adjustment = 0.0
             # leg_symmetry = 10.0
 
-            hip_pos = 0.25
-            foot_mirror = 0.15
+            hip_pos = -2.0
+            foot_mirror = 0.25
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -189,7 +189,7 @@ class TitaRobotFlatCfg( LeggedRobotCfg ):
             dof_vel_limits = 0.0
     
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'  # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
 

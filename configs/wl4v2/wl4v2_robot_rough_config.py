@@ -126,6 +126,7 @@ class Wl4V2RobotRoughCfg( LeggedRobotCfg ):
             action_smoothness= 0
             stand_still = 0.0
             hip_pos = 0.0
+            feet_contact_forces = -1.0
 
         only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
