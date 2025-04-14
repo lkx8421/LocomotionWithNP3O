@@ -135,12 +135,63 @@ class Wl4V2RobotRoughCfg( LeggedRobotCfg ):
         base_height_target = 0.40
         max_contact_force = 500.  # forces above this value are penalized
 
+    class domain_rand( LeggedRobotCfg.domain_rand):
+        randomize_friction = True
+        friction_range = [0.2, 2.75]
+        randomize_restitution = True
+        restitution_range = [0.0,1.0]
+        randomize_base_mass = True
+        added_mass_range = [-1., 3.]
+        randomize_base_com = True
+        added_com_range = [-0.1, 0.1]
+        push_robots = True
+        push_interval_s = 15
+        max_push_vel_xy = 1
+
+        randomize_motor = True
+        motor_strength_range = [0.8, 1.2]
+
+        randomize_kpkd = True
+        kp_range = [0.8,1.2]
+        kd_range = [0.8,1.2]
+
+        randomize_lag_timesteps = True
+        lag_timesteps = 3
+
+        disturbance = True
+        disturbance_range = [-30.0, 30.0]
+        disturbance_interval = 8
+
+        # randomize_initial_joint_pos = True
+        # initial_joint_pos_range = [0.5, 1.5]
+    
+    class costs:
+        num_costs = 3
+        class scales:
+            pos_limit = 0.1
+            torque_limit = 0.1
+            dof_vel_limits = 0.1
+
+        class d_values:
+            pos_limit = 0.0
+            torque_limit = 0.0
+            dof_vel_limits = 0.0
+
     class terrain(LeggedRobotCfg.terrain):
         mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
 
 class Wl4V2RobotRoughCfgPPO( LeggedRobotCfgPPO ):
+    class algorithm( LeggedRobotCfgPPO.algorithm ):
+        entropy_coef = 0.01
+        learning_rate = 1.e-3
+        max_grad_norm = 0.01
+        num_learning_epochs = 5
+        num_mini_batches = 4 # mini batch size = num_envs*nsteps / nminibatches
+        cost_value_loss_coef = 0.1
+        cost_viol_loss_coef = 0.1
+
     class policy( LeggedRobotCfgPPO.policy):
         init_noise_std = 1.0
         continue_from_last_std = True
@@ -164,6 +215,10 @@ class Wl4V2RobotRoughCfgPPO( LeggedRobotCfgPPO ):
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = ''
         experiment_name = 'wl4v2_rough'
+        policy_class_name = 'ActorCriticBarlowTwins'
+        # policy_class_name = 'ActorCriticTransBarlowTwins'
+        runner_class_name = 'OnConstraintPolicyRunner'
+        algorithm_class_name = 'NP3O'
         max_iterations = 5000
         num_steps_per_env = 24
         resume = False

@@ -27,10 +27,10 @@ class Wl4V2Robot(LeggedRobot):
         super()._post_physics_step_callback()
     def reindex(self,tensor):
         #sim2real purpose
-        return tensor[:,[4,5,6,7,0,1,2,3,12,13,14,15,8,9,10,11]]
+        return tensor#[:,[4,5,6,7,0,1,2,3,12,13,14,15,8,9,10,11]]
     
     def reindex_feet(self,tensor):
-        return tensor[:,[1,0,3,2]]
+        return tensor#[:,[1,0,3,2]]
     def _compute_torques(self, actions):
         """ Compute torques from actions.
             Actions can be interpreted as position or velocity targets given to a PD controller, or directly as scaled torques.
