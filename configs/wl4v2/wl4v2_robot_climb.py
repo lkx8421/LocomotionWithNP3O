@@ -111,9 +111,9 @@ class Wl4V2ClimbRobot( LeggedRobot ):
         # feet air
     
     #------------ reward functions----------------
-    # def _reward_orientation(self):
-    #     # Penalize non flat base orientation
-    #     return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1) #* ~self.front_climb
+    def _reward_orientation(self):
+        # Penalize non flat base orientation
+        return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1) #* ~self.front_climb
 
     def _reward_base_height(self):
         # Penalize base height away from target
@@ -172,7 +172,7 @@ class Wl4V2ClimbRobot( LeggedRobot ):
         rot_mat = quat_to_rot_matrix(self.base_quat)
         base_x_world_z_angle = torch.acos(torch.clip(rot_mat[:, 2, 0], -1, 1))
         base_z_world_z_angle = torch.acos(torch.clip(rot_mat[:, 2, 2], -1, 1))
-        reward_front_pitch = -torch.square(base_x_world_z_angle) # 0.25 * torch.exp(-torch.square(base_x_world_z_angle)/0.5) 
+        reward_front_pitch = -torch.square(base_x_world_z_angle - 0.1) # 0.25 * torch.exp(-torch.square(base_x_world_z_angle)/0.5) 
         reward_rear_pitch = -torch.square(base_z_world_z_angle) # 0.25 * torch.exp(-torch.square(base_z_world_z_angle)/0.5) 
         reward_front = torch.where(self.front_climb, reward_front_pitch, torch.zeros_like(reward_front_pitch))
         reward_rear = torch.where(self.rear_climb, reward_rear_pitch, torch.zeros_like(reward_rear_pitch))
@@ -228,10 +228,22 @@ class Wl4V2ClimbRobot( LeggedRobot ):
         for i in range(len(self.feet_indices)):
             footpos_in_hip_frame[:, i, :] = quat_rotate_inverse(self.base_quat, cur_footpos_translated[:, i, :])
         target_foot_relative_x = torch.tensor([0.2, 0.2, 0.0, -0.0], device=self.device)
-        rew_foot_relative_x = torch.exp(-torch.sum(torch.square(footpos_in_hip_frame[:, :, 0] - target_foot_relative_x), dim=1)/0.025)
-        feet_contact_z = self.contact_forces[:, self.feet_indices, 2] > 1.
+        rew_foot_relative_x = torch.exp(-torch.sum(torch.square(footpos_in_hip_frame[:, :, 0] - target_foot_relative_x), dim=1)/0.1)
+        # feet_contact_z = self.contact_forces[:, self.feet_indices, 2] > 1.
+        rot_mat = quat_to_rot_matrix(self.base_quat)
 
-        return torch.where(torch.all(feet_contact_z, dim=1), rew_foot_relative_x, torch.zeros_like(rew_foot_relative_x))
+        return rew_foot_relative_x * (rot_mat[:, 2, 0] < 0.1)
+
+    def _reward_feet_front_rel_x(self):
+        hip_pos = self.rigid_body_states[:, [1, 5], 0:3]
+        cur_footpos_translated = self.feet_pos[:, [0, 1], :] - hip_pos
+        footpos_in_hip_frame = torch.zeros(self.num_envs, 2, 3, device=self.device)
+        for i in range(2):
+            footpos_in_hip_frame[:, i, :] = quat_rotate_inverse(self.base_quat, cur_footpos_translated[:, i, :])
+        target_foot_relative_x = torch.tensor([0.2, 0.2], device=self.device)
+        rew_foot_relative_x = torch.exp(-torch.sum(torch.square(footpos_in_hip_frame[:, :, 0] - target_foot_relative_x), dim=1)/0.1)
+        rot_mat = quat_to_rot_matrix(self.base_quat)
+        return rew_foot_relative_x * (rot_mat[:, 2, 0] < 0.1)#  ~self.front_climb *  ~self.rear_climb
         # return rew_foot_relative_x
         # return torch.where(self.episode_length_buf > self.threshold_episode_length, torch.zeros_like(rew_foot_relative_x), rew_foot_relative_x)
 

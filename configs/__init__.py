@@ -12,6 +12,8 @@ from .go2w.go2w_robot_rough_config import *
 from .go2w.go2w_robot import *
 from .wl4v2.wl4v2_robot import *
 from .wl4v2.wl4v2_robot_rough_config import *
+from .wl4v2.wl4v2_robot_crazy_config import *
+
 from .tita.tita_robot import *
 from .tita.tita_robot_flat_config import *
 
@@ -28,7 +30,12 @@ task_registry.register("tita_flat",TitaRobot,TitaRobotFlatCfg(),TitaRobotFlatCfg
 
 task_registry.register("go2w_rough",Go2WRobot,Go2WRobotRoughCfg(),Go2WRobotRoughCfgPPO())
 task_registry.register("wl4v2_rough",Wl4V2Robot,Wl4V2RobotRoughCfg(),Wl4V2RobotRoughCfgPPO())
+task_registry.register("wl4v2_crazy",Wl4V2Robot,Wl4V2RobotCrazyCfg(),Wl4V2RobotCrazyCfgPPO())
 
 # task_registry.register("go2w_climb",ClimbRobot,Go2WRobotClimbCfg(),Go2WRobotClimbCfgPPO())
 task_registry.register("wl4v2_climb",Wl4V2ClimbRobot,Wl4V2RobotClimbCfg(),Wl4V2RobotClimbCfgPPO())
-# task_registry.register("wl4v3_climb",ClimbRobot,Wl4V3RobotClimbCfg(),Wl4V3RobotClimbCfgPPO())
+task_registry.register("wl4v3_climb",Wl4V2ClimbRobot,Wl4V3RobotClimbCfg(),Wl4V3RobotClimbCfgPPO())
+
+from .wl4v3.wl4v3_robot_hopturn_config import *
+from .wl4v3.wl4v3_robot_hopturn import *
+task_registry.register("wl4v3_hopturn",Wl4V3RobotHopturn,Wl4V3RobotHopturnCfg(),Wl4V3RobotHopturnCfgPPO())

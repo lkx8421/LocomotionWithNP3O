@@ -85,6 +85,15 @@ class LeggedRobotCfg(BaseConfig):
         # terrain_proportions = [0.1, 0.2, 0.30, 0.30, 0.1]
         # trimesh only:
         slope_treshold = 0.75  # slopes above this threshold will be corrected to vertical surfaces
+        # extra add for multiple terrain
+        min_slope = 0.0
+        max_slope = 0.4
+        min_step = 0.05
+        max_step = 0.18
+        min_discrete_obstacles_height = 0.05
+        max_discrete_obstacles_height = 0.2
+        min_pit_depth = 0.0
+        max_pit_depth = 1.0
 
     class commands:
         curriculum = False
@@ -185,14 +194,14 @@ class LeggedRobotCfg(BaseConfig):
             dof_pos_limits = -10.0
             dof_vel = -0.
             dof_acc = -2.5e-7
-            torque_limits = -0.0002
+            torque_limits = -0.0
             base_height = -0.
             feet_air_time =  1.0
             collision = -1.0
             stumble = -0.0
             action_rate = -0.01
             stand_still = -0.
-            feet_contact_forces = -1.0
+            feet_contact_forces = -0.0
 
         only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
