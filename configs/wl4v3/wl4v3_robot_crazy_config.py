@@ -27,8 +27,44 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
-
+from isaacgym.torch_utils import *
+import torch
+# config
+from configs.wl4v2.wl4v2_robot import *
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
+class Wl4V3RobotCrazy(Wl4V2Robot):
+    # rewards
+    def _reward_feet_all_contact(self):
+        contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+        return torch.all(contact, dim=1)
+    
+    def _reward_foot_mirror(self):
+        # penalty when feet contact not mirror, RL foot mirror RR foot, FL foot mirror FR foot
+        mirror = torch.tensor([-1, 1, 1], device=self.device)
+        reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:,[0,1,2]] - self.dof_pos[:,[4,5,6]] * mirror),dim=-1)/0.05) +\
+            torch.exp(-torch.sum(torch.square(self.dof_pos[:,[8,9,10]] - self.dof_pos[:,[12,13,14]] * mirror),dim=-1)/0.05)
+        penalty = -torch.sum(torch.square(self.dof_pos[:,[0,1,2]] - self.dof_pos[:,[4,5,6]] * mirror),dim=-1) +\
+            -torch.sum(torch.square(self.dof_pos[:,[8,9,10]] - self.dof_pos[:,[12,13,14]] * mirror),dim=-1)
+        return reward
+     
+    def _reward_lin_vel_xy(self):
+        return torch.sum(torch.abs(self.base_lin_vel[:, :2]), dim=1)
+    
+    def _reward_heading(self):
+        if self.cfg.commands.heading_command:
+            _, _, heading = get_euler_xyz(self.base_quat)
+            heading = torch.where(heading > torch.pi, heading - 2 * torch.pi, heading) # limit heading to [-pi, pi]
+            reward = torch.square(heading - self.commands[:, 3])
+            return reward
+        else:
+            return 0
+        
+    def _reward_hip_pos(self):
+        return torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - self.default_dof_pos[:, self.hip_joint_indices]), dim=1)
+        # return torch.exp(-torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)/0.05) 
+        # flag = 1.#*(torch.abs(self.commands[:,1]) == 0)
+        # return flag * torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)
+        #return flag * 1.*(torch.abs(torch.sum(self.dof_pos[:, [0, 3, 6, 9]],dim=-1)) > 0.0)
 
 class Wl4V3RobotCrazyCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
@@ -48,15 +84,15 @@ class Wl4V3RobotCrazyCfg( LeggedRobotCfg ):
             'FR_hip_joint': -0.1 ,  # [rad]
             'RR_hip_joint': -0.1,   # [rad]
 
-            'FL_thigh_joint': 0.6,     # [rad]
-            'RL_thigh_joint': 0.6,   # [rad]
-            'FR_thigh_joint': 0.6,     # [rad]
-            'RR_thigh_joint': 0.6,   # [rad]
+            'FL_thigh_joint': 0.8,     # [rad]
+            'RL_thigh_joint': 1.0,   # [rad]
+            'FR_thigh_joint': 0.8,     # [rad]
+            'RR_thigh_joint': 1.0,   # [rad]
 
-            'FL_calf_joint': -1.2,   # [rad]
-            'RL_calf_joint': -1.2,    # [rad]
-            'FR_calf_joint': -1.2,  # [rad]
-            'RR_calf_joint': -1.2,    # [rad]
+            'FL_calf_joint': -1.5,   # [rad]
+            'RL_calf_joint': -1.5,    # [rad]
+            'FR_calf_joint': -1.5,  # [rad]
+            'RR_calf_joint': -1.5,    # [rad]
 
             'FL_foot_joint':0.0,
             'RL_foot_joint':0.0,
@@ -67,9 +103,9 @@ class Wl4V3RobotCrazyCfg( LeggedRobotCfg ):
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P_AND_V'
-        stiffness = {'hip': 30.,
-                     'thigh': 30.,
-                     'calf': 30.,
+        stiffness = {'hip': 40.,
+                     'thigh': 40.,
+                     'calf': 40.,
                      'foot': 10.}  # [N*m/rad]
         damping = {'hip': 1.0,
                    'thigh': 1.0,
@@ -79,12 +115,12 @@ class Wl4V3RobotCrazyCfg( LeggedRobotCfg ):
         action_scale = 0.25
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
-        hip_scale_reduction = 0.5
+        hip_scale_reduction = 1.0
         use_filter = True
 
     class commands( LeggedRobotCfg.control ):
         curriculum = True 
-        max_curriculum = 3.0
+        max_curriculum = 2.0
         num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
         heading_command = True  # if true: compute ang vel command from heading error
@@ -109,31 +145,33 @@ class Wl4V3RobotCrazyCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
-            powers = -2e-5
+            powers = 0.0#-2e-5
             termination = 0.0
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
-            lin_vel_z = -2.0
-            orientation = -0.01
+            lin_vel_z = 0.0#-2.0
+            orientation = -1.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
-            dof_acc = -2.5e-7
-            base_height = -2.0
+            dof_acc = 0.0#-2.5e-7
+            base_height = -10.0
             feet_air_time = 0.
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.01
-            action_smoothness= 0
-            stand_still = 0.0
-            hip_pos = 0.0
-            feet_contact_forces = -1.0
+            action_smoothness= 0.0#-0.002
+            # stand_still = -1.0
+            # heading = -0.05
+
+            hip_pos = -1.0
+            feet_contact_forces = -0.0
 
         only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
         soft_dof_pos_limit = 0.9  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
-        base_height_target = 0.40
+        base_height_target = 0.45
         max_contact_force = 500.  # forces above this value are penalized
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -185,7 +223,7 @@ class Wl4V3RobotCrazyCfg( LeggedRobotCfg ):
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
         min_slope = 0.0
-        max_slope = 1.0
+        max_slope = 0.8
         min_discrete_obstacles_height = 0.05
         max_discrete_obstacles_height = 0.2
         

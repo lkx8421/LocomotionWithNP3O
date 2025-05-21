@@ -36,6 +36,13 @@ task_registry.register("wl4v2_crazy",Wl4V2Robot,Wl4V2RobotCrazyCfg(),Wl4V2RobotC
 task_registry.register("wl4v2_climb",Wl4V2ClimbRobot,Wl4V2RobotClimbCfg(),Wl4V2RobotClimbCfgPPO())
 task_registry.register("wl4v3_climb",Wl4V2ClimbRobot,Wl4V3RobotClimbCfg(),Wl4V3RobotClimbCfgPPO())
 
+from .wl4v3.wl4v3_robot_crazy_config import *
+task_registry.register("wl4v3_crazy",Wl4V3RobotCrazy,Wl4V3RobotCrazyCfg(),Wl4V3RobotCrazyCfgPPO())
+
+from .wl4v3.wl4v3_robot_fastrot_config import *
+from .wl4v3.wl4v3_robot_fastrot import *
+task_registry.register("wl4v3_fastrot",Wl4V3RobotFastrot,Wl4V3RobotFastrotCfg(),Wl4V3RobotFastrotCfgPPO())
+
 from .wl4v3.wl4v3_robot_hopturn_config import *
 from .wl4v3.wl4v3_robot_hopturn import *
 task_registry.register("wl4v3_hopturn",Wl4V3RobotHopturn,Wl4V3RobotHopturnCfg(),Wl4V3RobotHopturnCfgPPO())

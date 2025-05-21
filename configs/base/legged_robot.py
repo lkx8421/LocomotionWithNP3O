@@ -935,14 +935,14 @@ class LeggedRobot(BaseTask):
         for name,scale in self.cost_scales.items():
             self.cost_names.append(name)
             name = '_cost_' + name
-            print('cost name:',name)
-            print('cost k value:',scale)
+            # print('cost name:',name)
+            # print('cost k value:',scale)
             self.cost_functions.append(getattr(self, name))
             self.cost_k_values.append(float(scale))
 
         for name,value in self.cost_d_values.items():
-            print('cost name:',name)
-            print('cost d value:',value)
+            # print('cost name:',name)
+            # print('cost d value:',value)
             self.cost_d_values_tensor.append(float(value))
 
         self.cost_k_values = torch.FloatTensor(self.cost_k_values).view(1,-1).to(self.device)

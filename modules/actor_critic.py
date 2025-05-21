@@ -2569,6 +2569,7 @@ class ActorCriticBarlowTwins(nn.Module):
         # Value function
         critic_layers = mlp_factory(activation,num_prop+self.scan_encoder_output_dim+priv_encoder_output_dim,1,critic_hidden_dims,last_act=False)
         self.critic = nn.Sequential(*critic_layers)
+        print(self.critic)
 
         # cost function
         cost_layers = mlp_factory(activation,num_prop+self.scan_encoder_output_dim+priv_encoder_output_dim,cost_dims,critic_hidden_dims,last_act=False)

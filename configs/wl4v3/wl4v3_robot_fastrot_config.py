@@ -30,7 +30,7 @@
 
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
-class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
+class Wl4V3RobotFastrotCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         num_envs = 4096
 
@@ -40,24 +40,23 @@ class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
         history_len = 10
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
         num_actions = 16
-        episode_length_s = 2
     class init_state( LeggedRobotCfg.init_state ):
-        pos = [0.0, 0.0, 0.48] # x,y,z [m]
+        pos = [0.0, 0.0, 0.60] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
-            'FL_hip_joint': 0.0,   # [rad]
-            'RL_hip_joint': 0.0,   # [rad]
-            'FR_hip_joint': -0.0 ,  # [rad]
-            'RR_hip_joint': -0.0,   # [rad]
+            'FL_hip_joint': -0.1,   # [rad]
+            'RL_hip_joint': 0.1,   # [rad]
+            'FR_hip_joint': 0.1 ,  # [rad]
+            'RR_hip_joint': -0.1,   # [rad]
 
-            'FL_thigh_joint': 0.8,     # [rad]
-            'RL_thigh_joint': 0.8,   # [rad]
-            'FR_thigh_joint': 0.8,     # [rad]
-            'RR_thigh_joint': 0.8,   # [rad]
+            'FL_thigh_joint': 0.7,     # [rad]
+            'RL_thigh_joint': 0.5,   # [rad]
+            'FR_thigh_joint': 0.7,     # [rad]
+            'RR_thigh_joint': 0.5,   # [rad]
 
-            'FL_calf_joint': -1.5,   # [rad]
-            'RL_calf_joint': -1.5,    # [rad]
-            'FR_calf_joint': -1.5,  # [rad]
-            'RR_calf_joint': -1.5,    # [rad]
+            'FL_calf_joint': -1.2,   # [rad]
+            'RL_calf_joint': -1.2,    # [rad]
+            'FR_calf_joint': -1.2,  # [rad]
+            'RR_calf_joint': -1.2,    # [rad]
 
             'FL_foot_joint':0.0,
             'RL_foot_joint':0.0,
@@ -72,9 +71,9 @@ class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
                      'thigh': 40.,
                      'calf': 40.,
                      'foot': 10.}  # [N*m/rad]
-        damping = {'hip': 2.0,
-                   'thigh': 2.0,
-                   'calf': 2.0,
+        damping = {'hip': 1.0,
+                   'thigh': 1.0,
+                   'calf': 1.0,
                    'foot': 0.5}     #  [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
@@ -84,26 +83,26 @@ class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
         use_filter = True
 
     class commands( LeggedRobotCfg.control ):
-        curriculum = False
-        max_curriculum = 1.
+        curriculum = True 
+        max_curriculum = 10.0
         num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
-        heading_command = True  # if true: compute ang vel command from heading error
+        heading_command = False  # if true: compute ang vel command from heading error
         global_reference = False
 
         class ranges:
             lin_vel_x = [-0.0, 0.0]  # min max [m/s]
             lin_vel_y = [-0.0, 0.0]  # min max [m/s]
-            ang_vel_yaw = [-0, 0]  # min max [rad/s]
-            heading = [-0, 0]
+            ang_vel_yaw = [-1, 1]  # min max [rad/s]
+            heading = [-3.14, 3.14]
 
     class asset( LeggedRobotCfg.asset ):
         file = '{ROOT_DIR}/resources/wl4v3/urdf/robot.urdf'
         foot_name = "foot"
-        name = "wl4v2"
+        name = "wl4v3"
         penalize_contacts_on = ["thigh", "calf"]
         terminate_after_contacts_on = ["base"]
-        self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
+        self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = False
   
@@ -111,39 +110,33 @@ class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
             powers = -2e-5
-            termination = -0.0
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.75
+            termination = 0.0
+            # tracking_lin_vel = 0.5
+            tracking_ang_vel = 1.0
             lin_vel_z = -2.0
-            orientation = -0.2
+            orientation = -1.0
+            ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -10.0
+            base_height = -2.0
             feet_air_time = 0.
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.01
-            action_smoothness= -0.002
+            action_smoothness= 0
             stand_still = 0.0
-            hip_pos = 0.0
-            feet_contact_forces = 0
-            # extra
-            yaw_control = -1.0
-            ang_vel_xy = -0.05
-            ang_vel_z = 2.5
-            # lin_vel_xy = -0.5
-            lin_vel_z_1 = 10.0
-            # feet_all_contact = -2.0
-            # survival = 0.2
-            feet_distance_x = -1.0
-            feet_distance_y = -1.0
 
-        only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
+            hip_pos = 0.0
+            feet_contact_forces = -0.0
+            # feet_all_contact = 0.2
+            foot_mirror = 0.15
+            lin_vel_xy = -1.0
+        only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
         soft_dof_pos_limit = 0.9  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
-        base_height_target = 0.35
+        base_height_target = 0.40
         max_contact_force = 500.  # forces above this value are penalized
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -155,7 +148,7 @@ class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
         added_mass_range = [-1., 3.]
         randomize_base_com = True
         added_com_range = [-0.1, 0.1]
-        push_robots = False
+        push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1
 
@@ -169,7 +162,7 @@ class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
         randomize_lag_timesteps = True
         lag_timesteps = 3
 
-        disturbance = False
+        disturbance = True
         disturbance_range = [-30.0, 30.0]
         disturbance_interval = 8
 
@@ -192,8 +185,14 @@ class Wl4V3RobotHopturnCfg( LeggedRobotCfg ):
         mesh_type = 'plane'  # "heightfield" # none, plane, heightfield or trimesh
         measure_heights = True
         include_act_obs_pair_buf = False
-
-class Wl4V3RobotHopturnCfgPPO( LeggedRobotCfgPPO ):
+        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
+        terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
+        min_slope = 0.0
+        max_slope = 0.8
+        min_discrete_obstacles_height = 0.05
+        max_discrete_obstacles_height = 0.2
+        
+class Wl4V3RobotFastrotCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
         learning_rate = 1.e-3
@@ -225,7 +224,7 @@ class Wl4V3RobotHopturnCfgPPO( LeggedRobotCfgPPO ):
       
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = ''
-        experiment_name = 'wl4v3_hopturn'
+        experiment_name = 'wl4v3_fastrot'
         policy_class_name = 'ActorCriticBarlowTwins'
         # policy_class_name = 'ActorCriticTransBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'

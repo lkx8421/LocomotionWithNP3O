@@ -18,7 +18,7 @@ class Wl4V2Robot(LeggedRobot):
         self.trot_gait = torch.zeros(1, 4, dtype=torch.float, device=self.device,requires_grad=False)
         self.trot_gait[:,0] = torch.pi
         self.trot_gait[:,-1] = torch.pi
-        print(self.trot_gait)
+        # print(self.trot_gait)
 
         self.trot_pattern1 = torch.tensor([1.,0,0,1.],dtype=torch.float, device=self.device,requires_grad=False).view(1,-1)
         self.trot_pattern2 = torch.tensor([0.,1.,1.,0.],dtype=torch.float, device=self.device,requires_grad=False).view(1,-1)
@@ -152,11 +152,6 @@ class Wl4V2Robot(LeggedRobot):
         no_contact = 1.*(self.contact_filt == 0)
         return torch.sum(torch.clamp(height_error,0,1) * no_contact, dim=1)
     
-    def _reward_hip_pos(self):
-        #return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)
-        # flag = 1.*(torch.abs(self.commands[:,1]) == 0)
-        # return flag * torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - torch.zeros_like(self.dof_pos[:, [0, 3, 6, 9]])), dim=1)
-        return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - torch.zeros_like(self.dof_pos[:, [0, 3, 6, 9]])), dim=1)
     
     def _reward_phase_contact(self):
         contact_goal = 1.*(torch.sin(self.phase) > 0.0)
@@ -245,7 +240,7 @@ class Wl4V2Robot(LeggedRobot):
     
     
     def _reward_hip_pos(self):
-        #return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)
+        # return torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - self.default_dof_pos[:, self.hip_joint_indices]), dim=1)
         reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)/0.05) 
         return reward
         # flag = 1.#*(torch.abs(self.commands[:,1]) == 0)
