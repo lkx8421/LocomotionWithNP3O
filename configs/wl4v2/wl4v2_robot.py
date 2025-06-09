@@ -32,6 +32,7 @@ class Wl4V2Robot(LeggedRobot):
     def reindex_feet(self,tensor):
         return tensor#[:,[1,0,3,2]]
     def _compute_torques(self, actions):
+
         """ Compute torques from actions.
             Actions can be interpreted as position or velocity targets given to a PD controller, or directly as scaled torques.
             [NOTE]: torques must have the same dimension as the number of DOFs, even if some DOFs are not actuated.
@@ -241,7 +242,7 @@ class Wl4V2Robot(LeggedRobot):
     
     def _reward_hip_pos(self):
         # return torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - self.default_dof_pos[:, self.hip_joint_indices]), dim=1)
-        reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)/0.05) 
+        reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)/0.25) 
         return reward
         # flag = 1.#*(torch.abs(self.commands[:,1]) == 0)
         # return flag * torch.sum(torch.square(self.dof_pos[:, self.hip_joint_indices] - torch.zeros_like(self.dof_pos[:, self.hip_joint_indices])), dim=1)

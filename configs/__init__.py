@@ -40,7 +40,6 @@ from .wl4v3.wl4v3_robot_crazy_config import *
 task_registry.register("wl4v3_crazy",Wl4V3RobotCrazy,Wl4V3RobotCrazyCfg(),Wl4V3RobotCrazyCfgPPO())
 
 from .wl4v3.wl4v3_robot_fastrot_config import *
-from .wl4v3.wl4v3_robot_fastrot import *
 task_registry.register("wl4v3_fastrot",Wl4V3RobotFastrot,Wl4V3RobotFastrotCfg(),Wl4V3RobotFastrotCfgPPO())
 
 from .wl4v3.wl4v3_robot_hopturn_config import *
