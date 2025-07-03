@@ -1,92 +1,109 @@
-# laoyoujichifan
+# Isaac Gym Environments for Legged Robots #
+This repository provides the environment used to train ANYmal (and other robots) to walk on rough terrain using NVIDIA's Isaac Gym.
+It includes all components needed for sim-to-real transfer: actuator network, friction & mass randomization, noisy observations and random pushes during training.  
+
+**Maintainer**: Nikita Rudin  
+**Affiliation**: Robotic Systems Lab, ETH Zurich  
+**Contact**: rudinn@ethz.ch  
+
+---
+
+### :bell: Announcement (09.01.2024) ###
+
+With the shift from Isaac Gym to Isaac Sim at NVIDIA, we have migrated all the environments from this work to [Orbit](https://github.com/NVIDIA-Omniverse/Orbit). Following this migration, this repository will receive limited updates and support. We encourage all users to migrate to the new framework for their applications.
+
+Information about this work's locomotion-related tasks in Orbit is available [here](https://isaac-orbit.github.io/orbit/source/features/environments.html#locomotion).
+
+---
+
+### Useful Links ###
+
+Project website: https://leggedrobotics.github.io/legged_gym/   
+Paper: https://arxiv.org/abs/2109.11978
+
+### Installation ###
+1. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
+2. Install pytorch 1.10 with cuda-11.3:
+    - `pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html`
+3. Install Isaac Gym
+   - Download and install Isaac Gym Preview 3 (Preview 2 will not work!) from https://developer.nvidia.com/isaac-gym
+   - `cd isaacgym/python && pip install -e .`
+   - Adapt to latest numpy`sed -i 's/np.float/float/' isaacgym/torch_utils.py`
+   - Try running an example `cd examples && python 1080_balls_of_solitude.py`
+   - For troubleshooting check docs `isaacgym/docs/index.html`)
+4. Install tensorboard
+   - `pip install tensorboard`
+5. Install setuptools 
+   - `pip install setuptools==59.5.0`
+
+### CODE STRUCTURE ###
+1. Each environment is defined by an env file (`legged_robot.py`) and a config file (`legged_robot_config.py`). The config file contains two classes: one containing  all the environment parameters (`LeggedRobotCfg`) and one for the training parameters (`LeggedRobotCfgPPo`).  
+2. Both env and config classes use inheritance.  
+3. Each non-zero reward scale specified in `cfg` will add a function with a corresponding name to the list of elements which will be summed to get the total reward.  
+4. Tasks must be registered using `task_registry.register(name, EnvClass, EnvConfig, TrainConfig)`. This is done in `envs/__init__.py`, but can also be done from outside of this repository.  
+
+### Usage ###
+1. Train:  
+  ```python train.py --task=wl4v2_rough```
+    -  To run on CPU add following arguments: `--sim_device=cpu`, `--rl_device=cpu` (sim on CPU and rl on GPU is possible).
+    -  To run headless (no rendering) add `--headless`.
+    - **Important**: To improve performance, once the training starts press `v` to stop the rendering. You can then enable it later to check the progress.
+    - The trained policy is saved in `logs/<experiment_name>/<date_time>_<run_name>/model_<iteration>.pt`. Where `<experiment_name>` and `<run_name>` are defined in the train config.
+    -  The following command line arguments override the values set in the config files:
+     - --task TASK: Task name.
+     - --resume:   Resume training from a checkpoint
+     - --experiment_name EXPERIMENT_NAME: Name of the experiment to run or load.
+     - --run_name RUN_NAME:  Name of the run.
+     - --load_run LOAD_RUN:   Name of the run to load when resume=True. If -1: will load the last run.
+     - --checkpoint CHECKPOINT:  Saved model checkpoint number. If -1: will load the last checkpoint.
+     - --num_envs NUM_ENVS:  Number of environments to create.
+     - --seed SEED:  Random seed.
+     - --max_iterations MAX_ITERATIONS:  Maximum number of training iterations.
+2. Play a trained policy:  
+```python simple_play.py --task=wl4v2_rough --load_run <run_name> --checkpoint <checkpoint>```
+    - By default, the loaded policy is the last model of the last run of the experiment folder.
+    - Other runs/model iteration can be selected by setting `load_run` and `checkpoint` in the train config.
+<!-- 3. Export policy as an ONNX file:  
+```python legged_gym/scripts/export_policy_as_onnx.py --task=pointfoot_flat```
+    - By default, the loaded policy is the last model of the last run of the experiment folder.
+    - Other runs/model iteration can be selected by setting `load_run` and `checkpoint` in the train config.
+    - The exported onnx file is saved in `logs/<experiment_name>/export/policy.pt`. -->
+
+### Adding a new environment ###
+The base environment `legged_robot` implements a rough terrain locomotion task. The corresponding cfg does not specify a robot asset (URDF/ MJCF) and has no reward scales. 
+
+1. Add a new folder to `envs/` with `'<your_env>_config.py`, which inherit from an existing environment cfgs  
+2. If adding a new robot:
+    - Add the corresponding assets to `resources/`.
+    - In `cfg` set the asset path, define body names, default_joint_positions and PD gains. Specify the desired `train_cfg` and the name of the environment (python class).
+    - In `train_cfg` set `experiment_name` and `run_name`
+3. (If needed) implement your environment in <your_env>.py, inherit from an existing environment, overwrite the desired functions and/or add your reward functions.
+4. Register your env in `legged_gym/envs/__init__.py`.
+5. Modify/Tune other parameters in your `cfg`, `cfg_train` as needed. To remove a reward set its scale to zero. Do not modify parameters of other envs!
 
 
+### Troubleshooting ###
+1. If you get the following error: `ImportError: libpython3.8m.so.1.0: cannot open shared object file: No such file or directory`, do: `sudo apt install libpython3.8`. It is also possible that you need to do `export LD_LIBRARY_PATH=/path/to/libpython/directory` / `export LD_LIBRARY_PATH=/path/to/conda/envs/your_env/lib`(for conda user. Replace /path/to/ to the corresponding path.).
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
+### Known Issues ###
+1. The contact forces reported by `net_contact_force_tensor` are unreliable when simulating on GPU with a triangle mesh terrain. A workaround is to use force sensors, but the force are propagated through the sensors of consecutive bodies resulting in an undesirable behaviour. However, for a legged robot it is possible to add sensors to the feet/end effector only and get the expected results. When using the force sensors make sure to exclude gravity from the reported forces with `sensor_options.enable_forward_dynamics_forces`. Example:
 ```
-cd existing_repo
-git remote add origin http://git.ddt.dev:9281/rbt/alg/laoyoujichifan.git
-git branch -M main
-git push -uf origin main
+    sensor_pose = gymapi.Transform()
+    for name in feet_names:
+        sensor_options = gymapi.ForceSensorProperties()
+        sensor_options.enable_forward_dynamics_forces = False # for example gravity
+        sensor_options.enable_constraint_solver_forces = True # for example contacts
+        sensor_options.use_world_frame = True # report forces in world frame (easier to get vertical components)
+        index = self.gym.find_asset_rigid_body_index(robot_asset, name)
+        self.gym.create_asset_force_sensor(robot_asset, index, sensor_pose, sensor_options)
+    (...)
+
+    sensor_tensor = self.gym.acquire_force_sensor_tensor(self.sim)
+    self.gym.refresh_force_sensor_tensor(self.sim)
+    force_sensor_readings = gymtorch.wrap_tensor(sensor_tensor)
+    self.sensor_forces = force_sensor_readings.view(self.num_envs, 4, 6)[..., :3]
+    (...)
+
+    self.gym.refresh_force_sensor_tensor(self.sim)
+    contact = self.sensor_forces[:, :, 2] > 1.
 ```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](http://git.ddt.dev:9281/rbt/alg/laoyoujichifan/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
