@@ -34,7 +34,7 @@ class Wl4V2RobotClimbCfg( LeggedRobotCfg ):
 
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
-        control_type = 'P_AND_V'
+        control_type = 'P'
         stiffness = {'hip': 30.,
                      'thigh': 30.,
                      'calf': 30.,

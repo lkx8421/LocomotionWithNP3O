@@ -81,9 +81,17 @@ class Terrain:
                                             length=self.width_per_env_pixels,
                                             vertical_scale=self.cfg.vertical_scale,
                                             horizontal_scale=self.cfg.horizontal_scale)
-        slope = difficulty * 0.4
-        step_height = 0.05 + 0.18 * difficulty
-        discrete_obstacles_height = 0.05 + difficulty * 0.2
+        if not hasattr(self.cfg, 'slope'):
+            self.cfg.slope = [0, 0.4]
+        if not hasattr(self.cfg, 'step_height'):
+            self.cfg.step_height = [0.05, 0.23]
+        if not hasattr(self.cfg, 'discrete_obstacles_height'):
+            self.cfg.discrete_obstacles_height = [0.05, 0.25]
+
+        slope = self.cfg.slope[0] + (self.cfg.slope[1] - self.cfg.slope[0]) * difficulty
+        step_height = self.cfg.step_height[0] + (self.cfg.step_height[1] - self.cfg.step_height[0]) * difficulty
+        discrete_obstacles_height = self.cfg.discrete_obstacles_height[0] + (self.cfg.discrete_obstacles_height[1] - self.cfg.discrete_obstacles_height[0]) * difficulty
+
         stepping_stones_size = 1.5 * (1.05 - difficulty)
         stone_distance = 0.05 if difficulty == 0 else 0.1
         gap_size = 1. * difficulty

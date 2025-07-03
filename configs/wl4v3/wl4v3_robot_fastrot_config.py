@@ -100,7 +100,7 @@ class Wl4V3RobotFastrotCfg( LeggedRobotCfg ):
 
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
-        control_type = 'P_AND_V'
+        control_type = 'P'
         stiffness = {'hip': 40.,
                      'thigh': 40.,
                      'calf': 40.,

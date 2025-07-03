@@ -78,7 +78,7 @@ class Wl4V2ClimbRobot( LeggedRobot ):
             joint_pos_target = actions_scaled + self.default_dof_pos
 
         control_type = self.cfg.control.control_type
-        if control_type == "P_AND_V":
+        if control_type == "P":
             if not self.cfg.domain_rand.randomize_kpkd:  # TODO add strength to gain directly
                 torques = self.p_gains*(joint_pos_target - self.dof_pos) - self.d_gains*self.dof_vel
                 torques[:,self.foot_joint_indices] = self.p_gains[self.foot_joint_indices] * actions_scaled[:,self.foot_joint_indices] - self.d_gains[self.foot_joint_indices] * self.dof_vel[:,self.foot_joint_indices]                

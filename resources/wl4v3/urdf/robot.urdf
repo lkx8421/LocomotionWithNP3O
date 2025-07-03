@@ -163,7 +163,7 @@
     <child link="FL_foot"/>
     <axis xyz="0 0 1"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
+    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
   </joint>
   <link name="FR_hip">
     <inertial>
@@ -277,7 +277,7 @@
     <child link="FR_foot"/>
     <axis xyz="0 0 1"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
+    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
   </joint>
   <link name="R_base_link">
     <inertial>
@@ -425,7 +425,7 @@
     <child link="RL_foot"/>
     <axis xyz="0 0 1"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
+    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
   </joint>
   <link name="RR_hip">
     <inertial>
@@ -539,6 +539,6 @@
     <child link="RR_foot"/>
     <axis xyz="0 0 1"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="12.5"/>
+    <limit effort="20" lower="-1000000.0" upper="1000000.0" velocity="25"/>
   </joint>
 </robot>
