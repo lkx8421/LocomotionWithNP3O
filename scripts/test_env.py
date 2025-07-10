@@ -28,10 +28,14 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
+import sys
+import os
+# Add the parent directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from configs import *
 from modules import *
-from utils import  get_args, export_policy_as_jit, task_registry, Logger
+from utils import get_args, export_policy_as_jit, task_registry, Logger
 from utils.helpers import class_to_dict
 from utils.task_registry import task_registry
 import numpy as np

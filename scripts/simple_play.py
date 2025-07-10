@@ -1,6 +1,8 @@
 import cv2
 import os
-
+import sys
+# Add the parent directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs import *
 from isaacgym import gymapi
 from modules import *
@@ -28,7 +30,7 @@ def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
     env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
-    # env_cfg.terrain.mesh_type = 'plane'
+    env_cfg.terrain.mesh_type = 'plane'
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
@@ -126,7 +128,7 @@ def play(args):
         z_vel += torch.square(env.base_lin_vel[:, 2])
         xy_vel += torch.sum(torch.square(env.base_ang_vel[:, :2]), dim=1)
 
-        env.commands[:,0] = 1
+        env.commands[:,0] = 0.5
         env.commands[:,1] = 0
         env.commands[:,2] = 0
         env.commands[:,3] = 0
