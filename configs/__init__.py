@@ -25,4 +25,11 @@ from .y1v1.y1v1_rough_config import *
 from .y1v1.y1v1 import *
 task_registry.register("y1v1_rough",Y1V1,Y1V1RoughCfg(),Y1V1RoughCfgPPO())
 
+# y1v0h task 
+from .y1v0h.y1v0h import *
+from .y1v0h.y1v0h_config import *
+task_registry.register("y1v0h",Y1v0h,Y1v0hCfg(),Y1v0hCfgPPO())
+from .y1v0h.y1v0h_flat_config import *
+task_registry.register("y1v0h_flat",Y1v0hFlat,Y1v0hFlatCfg(),Y1v0hFlatCfgPPO())
+
 
