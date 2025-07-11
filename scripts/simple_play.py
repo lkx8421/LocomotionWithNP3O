@@ -29,27 +29,27 @@ def delete_files_in_directory(directory_path):
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
-    env_cfg.terrain.mesh_type = 'plane'
-    env_cfg.terrain.num_rows = 5
-    env_cfg.terrain.num_cols = 5
-    # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
-    env_cfg.terrain.terrain_proportions = [0, 0, 0, 0, 0, 0, 0]
-    env_cfg.terrain.curriculum = False
-    env_cfg.noise.add_noise = False
-    #env_cfg.terrain.mesh_type = 'plane'
-    env_cfg.domain_rand.push_robots = False
-    #env_cfg.domain_rand.randomize_friction = False
-    env_cfg.domain_rand.randomize_base_com = False
-    env_cfg.domain_rand.randomize_base_mass = False
-    env_cfg.domain_rand.randomize_motor = False
-    env_cfg.domain_rand.randomize_lag_timesteps = False
-    env_cfg.noise.add_noise = False
-    env_cfg.domain_rand.randomize_friction = False
-    env_cfg.domain_rand.randomize_restitution = False
-    env_cfg.control.use_filter = True
-    env_cfg.domain_rand.disturbance = False
-    env_cfg.domain_rand.randomize_kpkd = False
+    # env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
+    # env_cfg.terrain.mesh_type = 'plane'
+    # env_cfg.terrain.num_rows = 5
+    # env_cfg.terrain.num_cols = 5
+    # # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
+    # env_cfg.terrain.terrain_proportions = [0, 0, 0, 0, 0, 0, 0]
+    # env_cfg.terrain.curriculum = False
+    # env_cfg.noise.add_noise = False
+    # #env_cfg.terrain.mesh_type = 'plane'
+    # env_cfg.domain_rand.push_robots = False
+    # #env_cfg.domain_rand.randomize_friction = False
+    # env_cfg.domain_rand.randomize_base_com = False
+    # env_cfg.domain_rand.randomize_base_mass = False
+    # env_cfg.domain_rand.randomize_motor = False
+    # env_cfg.domain_rand.randomize_lag_timesteps = False
+    # env_cfg.noise.add_noise = False
+    # env_cfg.domain_rand.randomize_friction = False
+    # env_cfg.domain_rand.randomize_restitution = False
+    # env_cfg.control.use_filter = True
+    # env_cfg.domain_rand.disturbance = False
+    # env_cfg.domain_rand.randomize_kpkd = False
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
     obs = env.get_observations()
@@ -113,21 +113,7 @@ def play(args):
     print(f'gathering {num_frames} frames')
     video = None
 
-    #torch.sum(self.last_actions - self.actions, dim=1)
-    # self.base_lin_vel[:, 2]
-    #torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
-
-    action_rate = 0
-    z_vel = 0
-    xy_vel = 0
-    feet_air_time = 0
-
-
     for i in range(num_frames):
-        action_rate += torch.sum(torch.abs(env.last_actions - env.actions),dim=1)
-        z_vel += torch.square(env.base_lin_vel[:, 2])
-        xy_vel += torch.sum(torch.square(env.base_ang_vel[:, :2]), dim=1)
-
         env.commands[:,0] = 0.5
         env.commands[:,1] = 0
         env.commands[:,2] = 0
@@ -175,10 +161,6 @@ def play(args):
             #             logger.log_rewards(infos["episode"], num_episodes)
             # elif i==stop_rew_log:
             #     logger.print_rewards()
-    # print("action rate:",action_rate/num_frames)
-    # print("z vel:",z_vel/num_frames)
-    # print("xy_vel:",xy_vel/num_frames)
-    # print("feet air reward",feet_air_time/num_frames)
 
     video.release()
 

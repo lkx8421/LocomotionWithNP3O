@@ -181,6 +181,33 @@ class TitaFlatCfg( LeggedRobotCfg ):
         measure_heights = True
         include_act_obs_pair_buf = False
 
+class TitaFlatCfg_Play( TitaFlatCfg ):
+    class env(TitaFlatCfg.env):
+        num_envs = 1
+    class terrain(TitaFlatCfg.terrain):
+        mesh_type = 'plane'  # "heightfield" # none, plane, heightfield or trimesh
+        num_rows = 5
+        num_cols = 5
+        terrain_proportions = [0, 0, 0, 0, 0, 0, 0]
+        curriculum = False
+
+    class noise( TitaFlatCfg.noise ):
+        add_noise = False
+    class control ( TitaFlatCfg.control ):
+        use_filter = True
+
+    class domain_rand( TitaFlatCfg.domain_rand ):
+        push_robots = False
+        randomize_friction = False
+        randomize_base_com = False
+        randomize_base_mass = False
+        randomize_motor = False
+        randomize_lag_timesteps = False
+        randomize_friction = False
+        randomize_restitution = False
+        disturbance = False
+        randomize_kpkd = False
+
 class TitaFlatCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01

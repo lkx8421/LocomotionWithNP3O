@@ -183,6 +183,34 @@ class Y1V0RoughCfg( LeggedRobotCfg ):
         measure_heights = True
         include_act_obs_pair_buf = False
 
+class Y1V0RoughCfg_Play( Y1V0RoughCfg ):
+    class env(Y1V0RoughCfg.env):
+        num_envs = 1
+    class terrain(Y1V0RoughCfg.terrain):
+        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
+        num_rows = 5
+        num_cols = 5
+        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
+        terrain_proportions = [0, 0, 1, 0, 0, 0, 0]
+        curriculum = False
+
+    class noise( Y1V0RoughCfg.noise ):
+        add_noise = False
+    class control ( Y1V0RoughCfg.control ):
+        use_filter = True
+
+    class domain_rand( Y1V0RoughCfg.domain_rand ):
+        push_robots = False
+        randomize_friction = False
+        randomize_base_com = False
+        randomize_base_mass = False
+        randomize_motor = False
+        randomize_lag_timesteps = False
+        randomize_friction = False
+        randomize_restitution = False
+        disturbance = False
+        randomize_kpkd = False
+
 class Y1V0RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
