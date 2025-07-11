@@ -31,28 +31,6 @@ class LeggedRobotCfg(BaseConfig):
             pos_limit = 0.0
             torque_limit = 0.0
             dof_vel_limits = 0.0
-    class depth:
-        use_camera = False
-        camera_num_envs = 192
-        camera_terrain_num_rows = 10
-        camera_terrain_num_cols = 20
-
-        position = [0.27, 0, 0.03]  # front camera
-        angle = [-5, 5]  # positive pitch down
-
-        update_interval = 5  # 5 works without retraining, 8 worse
-
-        original = (106, 60)
-        resized = (87, 58)
-        horizontal_fov = 87
-        buffer_len = 2
-        
-        near_clip = 0
-        far_clip = 2
-        dis_noise = 0.0
-        
-        scale = 1
-        invert = True
 
     class terrain:
         mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
@@ -296,14 +274,6 @@ class LeggedRobotCfgPPO(BaseConfig):
         dagger_update_freq = 20
         priv_reg_coef_schedual = [0, 0.1, 2000, 3000]
         priv_reg_coef_schedual_resume = [0, 0.1, 0, 1]
-    
-    class depth_encoder:
-        if_depth = LeggedRobotCfg.depth.use_camera
-        depth_shape = LeggedRobotCfg.depth.resized
-        buffer_len = LeggedRobotCfg.depth.buffer_len
-        hidden_dims = 512
-        learning_rate = 1.e-3
-        num_steps_per_env = LeggedRobotCfg.depth.update_interval * 24
 
     class runner:
         policy_class_name = 'ActorCriticBarlowTwins'

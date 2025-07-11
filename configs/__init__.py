@@ -2,14 +2,14 @@ from .base.base_config import *
 from .base.base_task import *
 from .base.legged_robot_config import *
 from .base.legged_robot import *
-from .go2.go2_robot_config import *
-from .go2.go2_robot import *
+# from .go2.go2_robot_config import *
+# from .go2.go2_robot import *
 from utils.task_registry import task_registry
-task_registry.register("go2",Go2Robot,Go2RobotCfg(),Go2RobotCfgPPO())
+# task_registry.register("go2",Go2Robot,Go2RobotCfg(),Go2RobotCfgPPO())
 
-from .go2w.go2w_robot_rough_config import *
-from .go2w.go2w_robot import *
-task_registry.register("go2w_rough",Go2WRobot,Go2WRobotRoughCfg(),Go2WRobotRoughCfgPPO())
+# from .go2w.go2w_robot_rough_config import *
+# from .go2w.go2w_robot import *
+# task_registry.register("go2w_rough",Go2WRobot,Go2WRobotRoughCfg(),Go2WRobotRoughCfgPPO())
 # tita task 
 from .tita.tita import *
 from .tita.tita_flat_config import *

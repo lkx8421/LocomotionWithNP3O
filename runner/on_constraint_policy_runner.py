@@ -12,7 +12,6 @@ from global_config import ROOT_DIR
 from modules import ActorCriticBarlowTwins 
 from algorithm import NP3O
 from envs.vec_env import VecEnv
-from modules.depth_backbone import DepthOnlyFCBackbone58x87, RecurrentDepthBackbone
 from utils.helpers import hard_phase_schedualer, partial_checkpoint_load
 from copy import copy, deepcopy
 from utils import get_load_path
@@ -28,7 +27,6 @@ class OnConstraintPolicyRunner:
         self.cfg = train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
-        self.depth_encoder_cfg = train_cfg["depth_encoder"]
         self.device = device
         self.env = env
 
@@ -51,28 +49,11 @@ class OnConstraintPolicyRunner:
             actor_critic.load_state_dict(model_dict['model_state_dict'])
         
         actor_critic.to(self.device)
-        
-
-        # Depth encoder
-        self.if_depth = self.depth_encoder_cfg["if_depth"]
-        if self.if_depth:
-            depth_backbone = DepthOnlyFCBackbone58x87(env.cfg.env.n_proprio, 
-                                                    self.policy_cfg["scan_encoder_dims"][-1], 
-                                                    self.depth_encoder_cfg["hidden_dims"],
-                                                    )
-            depth_encoder = RecurrentDepthBackbone(depth_backbone, env.cfg).to(self.device)
-            depth_actor = deepcopy(actor_critic.actor)
-        else:
-            depth_encoder = None
-            depth_actor = None
 
         # Create algorithm
         self.alg_cfg['k_value'] = self.env.cost_k_values
         alg_class = eval(self.cfg["algorithm_class_name"]) # PPO
-        self.alg = alg_class(actor_critic, 
-                                  depth_encoder, self.depth_encoder_cfg, depth_actor,
-                                  device=self.device,
-                                  **self.alg_cfg)
+        self.alg = alg_class(actor_critic, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
         self.dagger_update_freq = self.alg_cfg["dagger_update_freq"]
@@ -108,7 +89,6 @@ class OnConstraintPolicyRunner:
         critic_obs = privileged_obs if privileged_obs is not None else obs
         obs, critic_obs = obs.to(self.device), critic_obs.to(self.device)
         infos = {}
-        infos["depth"] = self.env.depth_buffer.clone().to(self.device) if self.if_depth else None
         self.alg.actor_critic.train() # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -277,9 +257,6 @@ class OnConstraintPolicyRunner:
             'iter': self.current_learning_iteration,
             'infos': infos,
             }
-        if self.if_depth:
-            state_dict['depth_encoder_state_dict'] = self.alg.depth_encoder.state_dict()
-            state_dict['depth_actor_state_dict'] = self.alg.depth_actor.state_dict()
         torch.save(state_dict, path)
 
     def load(self, path, load_optimizer=True):
@@ -288,18 +265,6 @@ class OnConstraintPolicyRunner:
         loaded_dict = torch.load(path, map_location=self.device)
         self.alg.actor_critic.load_state_dict(loaded_dict['model_state_dict'])
         self.alg.estimator.load_state_dict(loaded_dict['estimator_state_dict'])
-        if self.if_depth:
-            if 'depth_encoder_state_dict' not in loaded_dict:
-                warnings.warn("'depth_encoder_state_dict' key does not exist, not loading depth encoder...")
-            else:
-                print("Saved depth encoder detected, loading...")
-                self.alg.depth_encoder.load_state_dict(loaded_dict['depth_encoder_state_dict'])
-            if 'depth_actor_state_dict' in loaded_dict:
-                print("Saved depth actor detected, loading...")
-                self.alg.depth_actor.load_state_dict(loaded_dict['depth_actor_state_dict'])
-            else:
-                print("No saved depth actor, Copying actor critic actor to depth actor...")
-                self.alg.depth_actor.load_state_dict(self.alg.actor_critic.actor.state_dict())
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict['optimizer_state_dict'])
         # self.current_learning_iteration = loaded_dict['iter']

@@ -43,8 +43,7 @@ class LeggedRobot(BaseTask):
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
 
-        self.resize_transform = torchvision.transforms.Resize((self.cfg.depth.resized[1], self.cfg.depth.resized[0]), 
-                                                              interpolation=torchvision.transforms.InterpolationMode.BICUBIC)
+
         if not self.headless:
             self.set_camera(self.cfg.viewer.pos, self.cfg.viewer.lookat)
 
@@ -154,12 +153,6 @@ class LeggedRobot(BaseTask):
                     print(f"PD gain of joint {name} were not defined, setting them to zero")
 
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
-
-        if self.cfg.depth.use_camera:
-            self.depth_buffer = torch.zeros(self.num_envs,  
-                                            self.cfg.depth.buffer_len, 
-                                            self.cfg.depth.resized[1], 
-                                            self.cfg.depth.resized[0]).to(self.device)
             
         self.lag_buffer = torch.zeros(self.num_envs,self.cfg.domain_rand.lag_timesteps,self.num_actions,device=self.device,requires_grad=False)
     
@@ -247,7 +240,6 @@ class LeggedRobot(BaseTask):
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             self.envs.append(env_handle)
             self.actor_handles.append(actor_handle)
-            self.attach_camera(i, env_handle, actor_handle)
             self.mass_params_tensor[i, :] = torch.from_numpy(mass_params).to(self.device).to(torch.float)
 
         if self.cfg.domain_rand.randomize_friction:
@@ -319,11 +311,6 @@ class LeggedRobot(BaseTask):
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
-
-        if self.cfg.depth.use_camera and self.global_counter % self.cfg.depth.update_interval == 0:
-            self.extras["depth"] = self.depth_buffer[:, -2]  # have already selected last one
-        else:
-            self.extras["depth"] = None
  
         return self.obs_buf,self.privileged_obs_buf,self.rew_buf,self.cost_buf,self.reset_buf, self.extras
     
@@ -436,7 +423,6 @@ class LeggedRobot(BaseTask):
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         self.reset_idx(env_ids)
 
-        self.update_depth_buffer()
         self.compute_observations()
 
         self.last_actions[:] = self.actions[:]
@@ -446,75 +432,6 @@ class LeggedRobot(BaseTask):
 
         if self.viewer and self.enable_viewer_sync and self.debug_viz:
             self._draw_debug_vis()
-            
-    #------------- Cameras --------------
-    def attach_camera(self, i, env_handle, actor_handle):
-        if self.cfg.depth.use_camera:
-            config = self.cfg.depth
-            camera_props = gymapi.CameraProperties()
-            camera_props.width = self.cfg.depth.original[0]
-            camera_props.height = self.cfg.depth.original[1]
-            camera_props.enable_tensors = True
-            camera_horizontal_fov = self.cfg.depth.horizontal_fov
-            camera_props.horizontal_fov = camera_horizontal_fov
-
-            camera_handle = self.gym.create_camera_sensor(env_handle, camera_props)
-            self.cam_handles.append(camera_handle)
-
-            local_transform = gymapi.Transform()
-
-            camera_position = np.copy(config.position)
-            camera_angle = np.random.uniform(config.angle[0],config.angle[1])
-
-            local_transform.p = gymapi.Vec3(*camera_position)
-            local_transform.r = gymapi.Quat.from_euler_zyx(0, np.radians(camera_angle), 0)
-            root_handle = self.gym.get_actor_root_rigid_body_handle(env_handle, actor_handle)
-
-            self.gym.attach_camera_to_body(camera_handle, env_handle, root_handle, local_transform, gymapi.FOLLOW_TRANSFORM)
-
-    def update_depth_buffer(self):
-        if not self.cfg.depth.use_camera:
-            return 
-        # not meet the requirement of update
-        if self.global_counter % self.cfg.depth.update_interval != 0:
-            return 
-        self.gym.step_graphics(self.sim) # required to render in headless mode
-        self.gym.render_all_camera_sensors(self.sim)
-        self.gym.start_access_image_tensors(self.sim)
-
-        for i in range(self.num_envs):
-            depth_image_ = self.gym.get_camera_image_gpu_tensor(self.sim, 
-                                                                self.envs[i], 
-                                                                self.cam_handles[i],
-                                                                gymapi.IMAGE_DEPTH)
-            depth_image = gymtorch.wrap_tensor(depth_image_)
-            depth_image = self.process_depth_image(depth_image, i)
-
-            init_flag = self.episode_length_buf <= 1
-            if init_flag[i]:
-                self.depth_buffer[i] = torch.stack([depth_image] * self.cfg.depth.buffer_len, dim=0)
-            else:
-                self.depth_buffer[i] = torch.cat([self.depth_buffer[i, 1:], depth_image.to(self.device).unsqueeze(0)], dim=0)
-        
-        self.gym.end_access_image_tensors(self.sim)
-
-    def normalize_depth_image(self, depth_image):
-        depth_image = depth_image * -1
-        depth_image = (depth_image - self.cfg.depth.near_clip) / (self.cfg.depth.far_clip - self.cfg.depth.near_clip)  - 0.5
-        return depth_image
-    
-    def process_depth_image(self, depth_image, env_id):
-        # These operations are replicated on the hardware
-        depth_image = self.crop_depth_image(depth_image)
-        depth_image += self.cfg.depth.dis_noise * 2 * (torch.rand(1)-0.5)[0]
-        depth_image = torch.clip(depth_image, -self.cfg.depth.far_clip, -self.cfg.depth.near_clip)
-        depth_image = self.resize_transform(depth_image[None, :]).squeeze()
-        depth_image = self.normalize_depth_image(depth_image)
-        return depth_image
-
-    def crop_depth_image(self, depth_image):
-        # crop 30 pixels from the left and right and and 20 pixels from bottom and return croped image
-        return depth_image[:-2, 4:-4]
 
     def set_camera(self, position, lookat):
         """ Set camera position and direction
@@ -825,8 +742,6 @@ class LeggedRobot(BaseTask):
         """ Creates simulation, terrain and evironments
         """
         self.up_axis_idx = 2 # 2 for z, 1 for y -> adapt gravity accordingly
-        if self.cfg.depth.use_camera:
-            self.graphics_device_id = self.sim_device_id # required in headless mode
         self.sim = self.gym.create_sim(self.sim_device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
         mesh_type = self.cfg.terrain.mesh_type
         if mesh_type in ['heightfield', 'trimesh']:
@@ -1006,12 +921,6 @@ class LeggedRobot(BaseTask):
                 z = heights[j]
                 sphere_pose = gymapi.Transform(gymapi.Vec3(x, y, z), r=None)
                 gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], sphere_pose)
-        # draw depth image with window created by cv2
-        if self.cfg.depth.use_camera:
-            window_name = "Depth Image"
-            cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-            cv2.imshow("Depth Image", self.depth_buffer[self.lookat_id, -1].cup().numpy() + 0.5)
-            cv2.waitKey(1) 
 
     def _init_height_points(self):
         """ Returns points at which the height measurments are sampled (in base frame)
