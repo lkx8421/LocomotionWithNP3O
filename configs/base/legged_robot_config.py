@@ -64,15 +64,11 @@ class LeggedRobotCfg(BaseConfig):
         # trimesh only:
         slope_treshold = 0.75  # slopes above this threshold will be corrected to vertical surfaces
         # extra add for multiple terrain
-        min_slope = 0.0
-        max_slope = 0.4
-        min_step = 0.05
-        max_step = 0.18
-        min_discrete_obstacles_height = 0.05
-        max_discrete_obstacles_height = 0.2
-        min_pit_depth = 0.0
-        max_pit_depth = 1.0
-
+        slope = [0, 0.4]
+        step_height = [0.05, 0.23]
+        step_width = 0.31
+        discrete_obstacles_height = [0.05, 0.25]
+        pit_depth = [0.1, 1.0]
     class commands:
         curriculum = False
         max_curriculum = 1.
