@@ -48,22 +48,23 @@ class Y1V0Climb( Y1V0 ):
         self.reset_buf |= rot_mat[:, 2, 2] < -0.5
 
     def _update_climb_condition(self):
+        self.in_pit = self.terrain_types/self.cfg.terrain.num_cols >= sum(self.cfg.terrain.terrain_proportions)
         roll, pitch, yaw = get_euler_xyz(self.base_quat)
-        quat_only_yaw = quat_from_euler_xyz(torch.zeros_like(roll), torch.zeros_like(pitch), yaw)
-
+        quat_only_yaw = quat_from_euler_xyz(torch.zeros_like(roll), torch.zeros_like(pitch), yaw)    
         cur_footvel_translated = self.feet_vel # feet velocity in move base frame ,but z axis always vertical of ground
         footvel_in_body_frame = torch.zeros(self.num_envs, len(self.feet_indices), 3, device=self.device)
+        
         for i in range(len(self.feet_indices)):
             footvel_in_body_frame[:, i, :] = quat_rotate_inverse(quat_only_yaw, cur_footvel_translated[:, i, :])
-        bool_front = torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 0:2, 0] < 0.1, dim=1))
-        bool_rear =  torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 2:4, 0] < 0.1, dim=1))
+        bool_front = torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 0:2, 0] < 0.02, dim=1))
+        bool_rear =  torch.logical_and(self.commands[:, 0] > 0.1,  torch.any(footvel_in_body_frame[:, 2:4, 0] < 0.02, dim=1))       
         # position condition
         feet_pos_z = self.feet_pos[:, :, 2] - 0.0875 
-        self.front_climb = torch.logical_and(bool_front, torch.any(feet_pos_z[:, 0:2] < -0.01, dim=1))
-        self.rear_climb = torch.logical_and(bool_rear, torch.any(feet_pos_z[:, 2:4] < -0.01, dim=1)) * ~self.front_climb
+        self.front_climb = torch.logical_and(bool_front, torch.any(feet_pos_z[:, 0:2] < -0.01, dim=1)) * self.in_pit
+        self.rear_climb = torch.logical_and(bool_rear, torch.any(feet_pos_z[:, 2:4] < -0.01, dim=1)) * ~self.front_climb * self.in_pit
         # update pit
         # if self.cfg.terrain.curriculum:
-        self.in_pit = self.terrain_types/self.cfg.terrain.num_cols >= sum(self.cfg.terrain.terrain_proportions)
+        # self.in_pit = self.terrain_types/self.cfg.terrain.num_cols >= sum(self.cfg.terrain.terrain_proportions)
 
     def _resample_commands(self, env_ids):
         """ Randommly select commands of some environments
@@ -154,7 +155,7 @@ class Y1V0Climb( Y1V0 ):
         dot_product = torch.clip(torch.sum(base_x_axis * torch.tensor([0, 0, 1], device=self.device), dim=-1), -1, 1)
         angle_error = torch.acos(dot_product)
         
-        extra_height = torch.where(angle_error > 0.45*torch.pi, torch.zeros_like(angle_error), 0.3 * torch.cos(angle_error))
+        extra_height = torch.where(angle_error > 0.45*torch.pi, torch.zeros_like(angle_error), 0.5 * torch.cos(angle_error))
         base_height = base_height - extra_height
         return torch.square(base_height - self.cfg.rewards.base_height_target)
 

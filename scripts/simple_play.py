@@ -29,7 +29,7 @@ def delete_files_in_directory(directory_path):
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    # env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
     # env_cfg.terrain.mesh_type = 'plane'
     # env_cfg.terrain.num_rows = 5
     # env_cfg.terrain.num_cols = 5
@@ -54,6 +54,10 @@ def play(args):
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
     obs = env.get_observations()
     # load policy partial_checkpoint_load
+    # train_cfg.runner.resume = True
+    # ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
+    # policy = ppo_runner.get_inference_policy(device=env.device)
+    # print("policy", policy)
     policy_cfg_dict = class_to_dict(train_cfg.policy)
     runner_cfg_dict = class_to_dict(train_cfg.runner)
     actor_critic_class = eval(runner_cfg_dict["policy_class_name"])
@@ -64,6 +68,7 @@ def play(args):
                                                       env.cfg.env.history_len,
                                                       env.num_actions,
                                                       **policy_cfg_dict)
+    # print("asdasdsa", policy)
 
     if args.load_run is not None:
       train_cfg.runner.load_run = args.load_run
@@ -114,13 +119,13 @@ def play(args):
     video = None
 
     for i in range(num_frames):
-        env.commands[:,0] = 0.5
-        env.commands[:,1] = 0
-        env.commands[:,2] = 0
-        env.commands[:,3] = 0
+        # env.commands[:,0] = 1.0
+        # env.commands[:,1] = 0
+        # env.commands[:,2] = 0
+        # env.commands[:,3] = 0
         actions = policy.act_teacher(obs.half())
         # actions = torch.clamp(actions,-1.2,1.2)
-
+        # actions = policy(obs.detach())
         obs, privileged_obs, rewards,costs,dones, infos = env.step(actions)
         env.gym.step_graphics(env.sim) # required to render in headless mode
         env.gym.render_all_camera_sensors(env.sim)

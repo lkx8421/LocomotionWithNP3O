@@ -631,7 +631,7 @@ class LeggedRobot(BaseTask):
         self.cost_buf[:] = 0
         for i in range(len(self.cost_functions)):
             name = self.cost_names[i]
-            cost = self.cost_functions[i]() * self.dt #self.cost_scales[name]
+            cost = self.cost_functions[i]() * self.cost_scales[name]
             self.cost_buf[:,i] += cost
             self.cost_episode_sums[name] += cost
     
@@ -832,8 +832,8 @@ class LeggedRobot(BaseTask):
             scale = self.cost_scales[key]
             if scale==0:
                 self.cost_scales.pop(key) 
-            # else:
-            #     self.cost_scales[key] *= self.dt
+            else:
+                self.cost_scales[key] *= self.dt
 
         self.cost_functions = []
         self.cost_names = []
@@ -1254,6 +1254,7 @@ class LeggedRobot(BaseTask):
 
     def _reward_feet_contact_forces(self):
         # penalize high contact forces
+        # print(torch.norm(self.contact_forces[0, self.feet_indices, :], dim=-1))
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
 
     def _reward_stumble(self):

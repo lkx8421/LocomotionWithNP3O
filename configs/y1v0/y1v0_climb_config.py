@@ -59,7 +59,7 @@ class Y1V0ClimbCfg( LeggedRobotCfg ):
         global_reference = False
 
         class ranges:
-            lin_vel_x = [-1.0, 1.0]  # min max [m/s]
+            lin_vel_x = [-0.5, 1.0]  # min max [m/s]
             lin_vel_y = [-0.5, 0.5]  # min max [m/s]
             ang_vel_yaw = [-1, 1]  # min max [rad/s]
             heading = [-3.14, 3.14]
@@ -155,7 +155,7 @@ class Y1V0ClimbCfg( LeggedRobotCfg ):
         measure_heights = True
         include_act_obs_pair_buf = False
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
-        terrain_proportions = [0.2, 0.2, 0.0, 0.0, 0.2, 0.0, 0.0]
+        terrain_proportions = [0.25, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0]
         pit_depth = [0.1, 0.8]
 
 class Y1V0ClimbCfg_Play( Y1V0ClimbCfg ):
@@ -171,7 +171,8 @@ class Y1V0ClimbCfg_Play( Y1V0ClimbCfg ):
         selected = True  # select a unique terrain type and pass all arguments
         terrain_kwargs = {
             "type": "pit_terrain",  
-            "depth": 0.5,                     
+            "depth": 0.8,
+            "width": 0.3,                
             "platform_size": 4.0               
         } # Dict of arguments for selected terrain
     class noise( Y1V0ClimbCfg.noise ):
@@ -189,6 +190,13 @@ class Y1V0ClimbCfg_Play( Y1V0ClimbCfg ):
         randomize_restitution = False
         disturbance = False
         randomize_kpkd = False
+    class commands( Y1V0ClimbCfg.commands ):
+        heading_command = True  # if true: compute ang vel command from heading error
+        class ranges:
+            lin_vel_x = [1.0, 1.0]  # min max [m/s]
+            lin_vel_y = [-0.0, 0.0]  # min max [m/s]
+            ang_vel_yaw = [-0, 0]  # min max [rad/s]
+            heading = [-0.0, 0.0]
 
 class Y1V0ClimbCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):

@@ -3,7 +3,7 @@ import torch
 # config
 from .y1v0 import *
 from configs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
-class Y1V0Flat(Y1V0):
+class Y1V0Recovery(Y1V0):
     def _reset_root_states(self, env_ids):
         """ Resets ROOT states position and velocities of selected environmments
             Sets base position based on the curriculum
@@ -16,7 +16,7 @@ class Y1V0Flat(Y1V0):
             self.cfg.init_state.pos
             self.root_states[env_ids] = self.base_init_state
             self.root_states[env_ids, :3] += self.env_origins[env_ids]
-            self.root_states[env_ids, :2] += torch_rand_float(-1., 1., (len(env_ids), 2), device=self.device) # xy position within 1m of the center
+            self.root_states[env_ids, :2] += torch_rand_float(-4., 4., (len(env_ids), 2), device=self.device) # xy position within 1m of the center
             self.root_states[env_ids, 2] += torch_rand_float(0., 0.2, (len(env_ids), 1), device=self.device).squeeze(1) # z position within 0.2m of the center
         else:
             self.root_states[env_ids] = self.base_init_state
@@ -33,7 +33,23 @@ class Y1V0Flat(Y1V0):
         self.gym.set_actor_root_state_tensor_indexed(self.sim,
                                                      gymtorch.unwrap_tensor(self.root_states),
                                                      gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
-    
+
+    def _reset_dofs(self, env_ids):
+        """ Resets DOF position and velocities of selected environmments
+        Positions are randomly selected within 0.5:1.5 x default positions.
+        Velocities are set to zero.
+
+        Args:
+            env_ids (List[int]): Environemnt ids
+        """
+        self.dof_pos[env_ids] = self.default_dof_pos #* torch_rand_float(0.5, 1.5, (len(env_ids), self.num_dof), device=self.device)
+        self.dof_vel[env_ids] = 0.
+
+        env_ids_int32 = env_ids.to(dtype=torch.int32)
+        self.gym.set_dof_state_tensor_indexed(self.sim,
+                                              gymtorch.unwrap_tensor(self.dof_state),
+                                              gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+        
     def check_termination(self):
         """ Check if environments need to be reset
         """
@@ -41,7 +57,7 @@ class Y1V0Flat(Y1V0):
                                    dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
-        self.reset_buf |= self._get_base_heights() < 0
+        # self.reset_buf |= self._get_base_heights() < 0
     #------------ reward functions----------------
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
@@ -50,6 +66,14 @@ class Y1V0Flat(Y1V0):
     def _reward_ang_vel_xy(self):
         # Penalize xy axes base angular velocity
         return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
+    
+    def _reward_lin_vel(self):
+        # Penalize z axis base linear velocity
+        return torch.clamp(-self.projected_gravity[:,2],0,1) * torch.sum(torch.square(self.base_lin_vel), dim=1)
+
+    def _reward_ang_vel(self):
+        # Penalize xy axes base angular velocity
+        return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.sum(torch.square(self.base_ang_vel), dim=1)
     
     def _reward_base_ang_acc(self):
         # Penalize dof accelerations
@@ -67,6 +91,7 @@ class Y1V0Flat(Y1V0):
         # Penalize base height away from target
         base_height = self._get_base_heights()
         return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.square(base_height - self.cfg.rewards.base_height_target)
+
     def _reward_torques(self):
         # Penalize torques
         return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.sum(torch.square(self.torques), dim=1)
@@ -110,28 +135,16 @@ class Y1V0Flat(Y1V0):
         # Tracking of angular velocity commands (yaw)
         ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
         return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)
+    
+    def _reward_stand_still(self):
+        # Penalize motion at zero commands
+        return torch.clamp(-self.projected_gravity[:,2],0,1) * (torch.norm(self.base_lin_vel[:, :2], dim=1) > 0.1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
 
     def _reward_upward(self):
         # print(self.projected_gravity[:,2])
         return 1 - torch.clamp(self.projected_gravity[:,2], -1, 1)
         # return 1 - self.projected_gravity[:,2]
-    
-    def _reward_feet_distance(self):
-        cur_footsteps_translated = self.feet_pos - self.root_states[:, 0:3].unsqueeze(1)
-        footsteps_in_body_frame = torch.zeros(self.num_envs, 4, 3, device=self.device)
-        for i in range(4):
-            footsteps_in_body_frame[:, i, :] = quat_rotate_inverse(self.base_quat,
-                                                                 cur_footsteps_translated[:, i, :])
 
-        stance_length = 0.4 * torch.ones([self.num_envs, 1,], device=self.device)
-        stance_width = 0.5 * torch.ones([self.num_envs, 1,], device=self.device)
-        desired_xs = torch.cat([stance_length / 2, stance_length / 2, -stance_length / 2, -stance_length / 2], dim=1)
-        desired_ys = torch.cat([stance_width / 2, -stance_width / 2, stance_width / 2, -stance_width / 2], dim=1)
-        stance_diff_x = torch.square(desired_xs - footsteps_in_body_frame[:, :, 0]).sum(dim=1)
-        stance_diff_y = torch.square(desired_ys - footsteps_in_body_frame[:, :, 1]).sum(dim=1)
-        # return stance_diff_x + stance_diff_y
-        return torch.exp((-stance_diff_x - stance_diff_y)/0.05)
-    
     def _reward_hip_pos(self):
         # penalty hip joint position not equal to zero
         reward = torch.exp(-torch.sum(torch.square(self.dof_pos[:, [0, 4, 8, 12]] - torch.zeros_like(self.default_dof_pos[:, [0, 4, 8, 12]])), dim=1)/0.05) 
@@ -145,10 +158,6 @@ class Y1V0Flat(Y1V0):
         reward = torch.sum(torch.square(self.dof_pos[:,[0,1,2]] - self.dof_pos[:,[12,13,14]] * mirror),dim=-1) +\
                  torch.sum(torch.square(self.dof_pos[:,[8,9,10]] - self.dof_pos[:,[4,5,6]] * mirror),dim=-1)
         return torch.clamp(-self.projected_gravity[:,2],0,1)*reward        
-    
-    def _reward_feet_all_contact(self):
-        contact = self.contact_forces[:, self.feet_indices, 2] < 1.
-        return torch.clamp(-self.projected_gravity[:,2],0,1)*0.25 * torch.sum(contact, dim=1)
     
     # ------------ cost functions----------------
     def _cost_torque_limit(self):
@@ -165,7 +174,7 @@ class Y1V0Flat(Y1V0):
         out_of_limits = -(self.dof_pos - self.dof_pos_limits[:, 0]).clip(max=0.) # lower limit
         out_of_limits += (self.dof_pos - self.dof_pos_limits[:, 1]).clip(min=0.)
         # return 1.*(torch.sum(out_of_limits, dim=1)>0.0)
-        return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.sum(out_of_limits, dim=1)
+        return torch.sum(out_of_limits, dim=1)
    
     def _cost_dof_vel_limits(self):
         # return 1.*(torch.sum(1.*(torch.abs(self.dof_vel) > self.dof_vel_limits*self.cfg.rewards.soft_dof_vel_limit),dim=1) > 0.0)
@@ -186,7 +195,7 @@ class Y1V0Flat(Y1V0):
         # Penalize motion at zero commands
         return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.sum(torch.abs(self.dof_pos[:, [1,2,5,6,9,10,13,14]] - self.default_dof_pos[:,[1,2,5,6,9,10,13,14]]), dim=1)
     
-class Y1V0FlatCfg( LeggedRobotCfg ):
+class Y1V0RecoveryCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         num_envs = 4096
         n_scan = 187
@@ -196,22 +205,22 @@ class Y1V0FlatCfg( LeggedRobotCfg ):
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
         num_actions = 16
     class init_state( LeggedRobotCfg.init_state ):
-        pos = [0.0, 0.0, 0.60] # x,y,z [m]
+        pos = [0.0, 0.0, 0.50] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
-            'FL_hip_joint': 0.1,   # [rad]
-            'FR_hip_joint': -0.1 ,  # [rad]
-            'RL_hip_joint': 0.1,   # [rad]
-            'RR_hip_joint': -0.1,   # [rad]
+            'FL_hip_joint': 0.0,   # [rad]
+            'FR_hip_joint': -0.0 ,  # [rad]
+            'RL_hip_joint': 0.0,   # [rad]
+            'RR_hip_joint': -0.0,   # [rad]
 
-            'FL_thigh_joint': 0.8,     # [rad]
-            'FR_thigh_joint': 0.8,     # [rad]
-            'RL_thigh_joint': 1.0,   # [rad]
-            'RR_thigh_joint': 1.0,   # [rad]
+            'FL_thigh_joint': 1.0,     # [rad]
+            'FR_thigh_joint': 1.0,     # [rad]
+            'RL_thigh_joint': 1.6,   # [rad]
+            'RR_thigh_joint': 1.6,   # [rad]
 
-            'FL_calf_joint': -1.5,   # [rad]
-            'FR_calf_joint': -1.5,  # [rad]
-            'RL_calf_joint': -1.5,    # [rad]
-            'RR_calf_joint': -1.5,    # [rad]
+            'FL_calf_joint': -2.4,   # [rad]
+            'FR_calf_joint': -2.4,  # [rad]
+            'RL_calf_joint': -2.4,    # [rad]
+            'RR_calf_joint': -2.4,    # [rad]
 
             'FL_foot_joint':0.0,
             'FR_foot_joint':0.0,
@@ -238,17 +247,17 @@ class Y1V0FlatCfg( LeggedRobotCfg ):
         use_filter = True
 
     class commands( LeggedRobotCfg.control ):
-        curriculum = True 
-        max_curriculum = 3.0
+        curriculum = False 
+        max_curriculum = 1.0
         num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
-        heading_command = True  # if true: compute ang vel command from heading error
+        heading_command = False  # if true: compute ang vel command from heading error
         global_reference = False
 
         class ranges:
-            lin_vel_x = [-1.0, 1.0]  # min max [m/s]
-            lin_vel_y = [-1.0, 1.0]  # min max [m/s]
-            ang_vel_yaw = [-1, 1]  # min max [rad/s]
+            lin_vel_x = [-0.0, 0.0]  # min max [m/s]
+            lin_vel_y = [-0.0, 0.0]  # min max [m/s]
+            ang_vel_yaw = [-0, 0]  # min max [rad/s]
             heading = [-3.14, 3.14]
 
     class asset( LeggedRobotCfg.asset ):
@@ -266,25 +275,28 @@ class Y1V0FlatCfg( LeggedRobotCfg ):
             torques = 0.0
             powers = 0.0#-2e-5
             termination = 0.0
-            tracking_lin_vel = 2.0
-            tracking_ang_vel = 1.0
-            lin_vel_z = -2.0
+            tracking_lin_vel = 0#1.0
+            tracking_ang_vel = 0#0.5
+            lin_vel = -2.0
+            ang_vel = -0.05
+            lin_vel_z = 0#-2.0
             orientation = -1.0
-            orientation_y = -10.0
-            ang_vel_xy = -0.05
+            orientation_y = 0#-10.0
+            ang_vel_xy = 0#-0.05
             # ang_vel_y = -1.0 # avoid flipping
             dof_pos_limits = -10.0
-            dof_vel = 0.0
+            dof_vel = -0.001
             dof_acc = -2.5e-7
             base_height = -1.0
             feet_air_time = 0.
-            collision = -1.0
+            collision = -10.0
+            stand_still = 0# -0.2
             feet_stumble = 0.0
             action_rate = -0.01
             # action_smoothness= -0.01
             # foot_mirror = -0.05
             # hip_pos = 0.5
-            upward = 0.5
+            upward = 4.0
             # feet_all_contact = -0.5
             # feet_contact_forces = -0.1
             # joint_power=-2e-5
@@ -295,7 +307,7 @@ class Y1V0FlatCfg( LeggedRobotCfg ):
         soft_dof_pos_limit = 0.9  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 0.9
         soft_torque_limit = 0.9
-        base_height_target = 0.45
+        base_height_target = 0.2
         max_contact_force = 500.  # forces above this value are penalized
     class costs(LeggedRobotCfg.costs):
         num_costs = 5
@@ -314,26 +326,26 @@ class Y1V0FlatCfg( LeggedRobotCfg ):
             default_joint = 0.0
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
-        curriculum = True
+        mesh_type = 'plane'  # "heightfield" # none, plane, heightfield or trimesh
+        curriculum = False
         measure_heights = True
         include_act_obs_pair_buf = False
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete, stepping stones, gap]
         # terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]
-        terrain_proportions = [0.7, 0.3, 0.0, 0.0, 0.0]
+        # terrain_proportions = [0.7, 0.3, 0.0, 0.0, 0.0]
 
         # terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
 
-        # terrain_proportions = [0.2, 0.3, 0.1, 0.1, 0.3]
+        terrain_proportions = [0.3, 0.4, 0.0, 0.0, 0.3]
         # terrain_proportions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
-        slope_treshold = 1.0  # slopes above this threshold will be corrected to vertical surfaces
-        slope = [0, 0.6]
+        # slope_treshold = 1.0  # slopes above this threshold will be corrected to vertical surfaces
+        # slope = [0, 0.6]
 
-class Y1V0FlatCfg_Play( Y1V0FlatCfg ):
-    class env(Y1V0FlatCfg.env):
+class Y1V0RecoveryCfg_Play( Y1V0RecoveryCfg ):
+    class env(Y1V0RecoveryCfg.env):
         num_envs = 10
-    class terrain(Y1V0FlatCfg.terrain):
-        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
+    class terrain(Y1V0RecoveryCfg.terrain):
+        mesh_type = 'plane'  # "heightfield" # none, plane, heightfield or trimesh
         num_rows = 5
         num_cols = 5
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
@@ -345,11 +357,11 @@ class Y1V0FlatCfg_Play( Y1V0FlatCfg ):
         #     "depth": 0.5,                     
         #     "platform_size": 4.0               
         # } # Dict of arguments for selected terrain
-    class noise( Y1V0FlatCfg.noise ):
+    class noise( Y1V0RecoveryCfg.noise ):
         add_noise = False
-    class control ( Y1V0FlatCfg.control ):
+    class control ( Y1V0RecoveryCfg.control ):
         use_filter = True
-    class domain_rand( Y1V0FlatCfg.domain_rand ):
+    class domain_rand( Y1V0RecoveryCfg.domain_rand ):
         push_robots = False
         randomize_friction = False
         randomize_base_com = False
@@ -360,15 +372,15 @@ class Y1V0FlatCfg_Play( Y1V0FlatCfg ):
         randomize_restitution = False
         disturbance = False
         randomize_kpkd = False
-    class commands( Y1V0FlatCfg.commands ):
+    class commands( Y1V0RecoveryCfg.commands ):
         heading_command = True  # if true: compute ang vel command from heading error
         class ranges:
             lin_vel_x = [0.0, 0.0]  # min max [m/s]
             lin_vel_y = [-0.0, 0.0]  # min max [m/s]
             ang_vel_yaw = [-0, 0]  # min max [rad/s]
             heading = [-0.0, 0.0]
-            
-class Y1V0FlatCfgPPO( LeggedRobotCfgPPO ):
+
+class Y1V0RecoveryCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
         learning_rate = 1.e-3
@@ -400,7 +412,7 @@ class Y1V0FlatCfgPPO( LeggedRobotCfgPPO ):
       
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = ''
-        experiment_name = 'y1v0_flat'
+        experiment_name = 'y1v0_recovery'
         policy_class_name = 'ActorCriticBarlowTwins'
         # policy_class_name = 'ActorCriticTransBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'
